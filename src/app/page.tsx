@@ -1,101 +1,762 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import Link from "next/link";
+import { useState } from "react";
+import {
+  Rocket,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  ExternalLink,
+  Search,
+  ChevronDown,
+  Copy,
+  Check,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { SEED_PLATFORMS } from "@/lib/data/platforms-seed";
+
+export default function LandingPage() {
+  const [selectedTier, setSelectedTier] = useState<number | "all">("all");
+  const [platformSearch, setPlatformSearch] = useState("");
+  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [copiedSnippet, setCopiedSnippet] = useState(false);
+
+  const filteredPlatforms = SEED_PLATFORMS.filter((p) => {
+    const matchesTier = selectedTier === "all" || p.tier === selectedTier;
+    const matchesSearch =
+      p.name.toLowerCase().includes(platformSearch.toLowerCase()) ||
+      p.categories.some((c) => c.toLowerCase().includes(platformSearch.toLowerCase()));
+    return matchesTier && matchesSearch;
+  });
+
+  const faqs = [
+    {
+      q: "How does the AI analysis actually work?",
+      a: "We evaluate your product's category, pricing model, tech stack, and target audience against our database of 50+ launch platforms. The AI scores each platform's fit from 0 to 100, writes one-line strategic reasoning, and generates listings that strictly observe that platform's character limits and community tone rules.",
+    },
+    {
+      q: "Will I get banned on Reddit or Hacker News for posting AI copy?",
+      a: "Never. Generic marketing hype gets downvoted immediately on Hacker News and Reddit. LaunchPilot generates plain, technical, architecture-focused posts for Show HN, and humble, founder-story posts for Reddit, complete with warnings about each subreddit's self-promotion rules. We never invent fake metrics or fake testimonials.",
+    },
+    {
+      q: "What is included in the Done-For-You ($99 / ₹6,999) plan?",
+      a: "Everything in the Launch Kit, plus our experienced team manually submits your product to 50+ high-authority directories within 7 business days. We log direct live listing URLs and upload proof screenshots to your Launch Tracker so you can verify every submission.",
+    },
+    {
+      q: "Can I try it for free?",
+      a: "Yes! Submitting your product is 100% free with no credit card required. You'll immediately receive your top 5 platform matches with fit scores and 2 complete copy samples.",
+    },
+    {
+      q: "Do you use automated bots to submit to directories?",
+      a: "No bots. Automated bot submissions often trigger CAPTCHA failures or immediate account bans. On our Done-For-You plan, every submission is done by human operators who format screenshots, create verified maker accounts where required, and follow submission guidelines.",
+    },
+    {
+      q: "Can I track my launch results?",
+      a: "Yes. Every platform matched in your Launch Tracker comes with an auto-generated unique UTM link (`?utm_source={platform}&utm_campaign=launchpilot`) so you can track exact referral traffic and signups in your own Google Analytics, Plausible, or PostHog.",
+    },
+  ];
+
+  const handleCopySample = () => {
+    navigator.clipboard.writeText("Show HN: DevScribe – Generate changelogs from git history and PR diffs\n\nHi HN, we built DevScribe to parse git commit trees and diffs to isolate user-facing changes from refactors. Stack: Next.js, OpenAI structured outputs. Feedback welcome.");
+    setCopiedSnippet(true);
+    setTimeout(() => setCopiedSnippet(false), 2000);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="flex flex-col min-h-screen">
+      {/* 1. HERO SECTION */}
+      <section className="relative overflow-hidden pt-20 pb-24 md:pt-28 md:pb-32 gradient-mesh">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex flex-col items-center text-center max-w-4xl mx-auto space-y-6">
+            {/* Pill */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-xs font-medium text-indigo-300 backdrop-blur-md animate-fade-in">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Distribution engine for indie hackers & bootstrappers</span>
+            </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1] text-balance">
+              You shipped it. <br />
+              <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-indigo-200 bg-clip-text text-transparent">
+                Now get it seen.
+              </span>
+            </h1>
+
+            {/* Subhead */}
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl text-balance leading-relaxed">
+              Tailored launches on 50+ platforms, plus Product Hunt, HN and Reddit launch prep. Built for indie devs.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 w-full sm:w-auto">
+              <Button asChild size="lg" variant="brand" className="w-full sm:w-auto gap-2 text-base px-8 py-6 shadow-xl shadow-indigo-500/25">
+                <Link href="/submit">
+                  <Rocket className="w-5 h-5" />
+                  Submit Your Product Free
+                </Link>
+              </Button>
+
+              <Button asChild size="lg" variant="outline" className="w-full sm:w-auto gap-2 text-base px-6 py-6 border-white/10 hover:border-white/20 bg-white/[0.03]">
+                <Link href="/product/prod-demo-1">
+                  <span>View Sample Report</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </div>
+
+            {/* Micro reassurance */}
+            <p className="text-xs text-muted-foreground/80 flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Free to submit • No credit card required • 2-minute setup
+            </p>
+
+            {/* Live Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-12 w-full max-w-4xl">
+              <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm">
+                <div className="text-2xl sm:text-3xl font-bold text-white">50+</div>
+                <div className="text-xs text-muted-foreground mt-1">Platforms Covered</div>
+              </div>
+              <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm">
+                <div className="text-2xl sm:text-3xl font-bold text-indigo-400">40+ hrs</div>
+                <div className="text-xs text-muted-foreground mt-1">Saved per Launch</div>
+              </div>
+              <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm">
+                <div className="text-2xl sm:text-3xl font-bold text-purple-400">92 DR</div>
+                <div className="text-xs text-muted-foreground mt-1">Top Domain Authority</div>
+              </div>
+              <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm">
+                <div className="text-2xl sm:text-3xl font-bold text-emerald-400">100%</div>
+                <div className="text-xs text-muted-foreground mt-1">Manual DFY Submissions</div>
+              </div>
+            </div>
+
+            {/* Interactive Hero Preview Card */}
+            <div className="w-full max-w-4xl mt-10 rounded-2xl border border-border/80 bg-card/60 backdrop-blur-xl p-4 sm:p-6 shadow-2xl text-left glow-card">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-lg">
+                    D
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white flex items-center gap-2">
+                      DevScribe <Badge variant="success" className="text-[10px]">Analyzed</Badge>
+                    </h3>
+                    <p className="text-xs text-muted-foreground">Git commit changelog automation</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground">Tone Match Engine:</span>
+                  <Badge variant="outline" className="border-indigo-500/30 text-indigo-300">
+                    Hacker News Mode
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+                {/* Tone Preview 1: Show HN */}
+                <div className="p-3.5 rounded-lg border border-border/70 bg-background/50 flex flex-col justify-between space-y-2">
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-semibold text-white">Show HN</span>
+                      <span className="text-[10px] text-amber-400 font-mono">0 Hype / Plain</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-mono leading-relaxed line-clamp-3">
+                      &quot;Show HN: DevScribe – Generate changelogs from git history and PR diffs. Stack: Next.js, OpenAI structured outputs.&quot;
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-medium">Fit Score: 96/100</div>
+                </div>
+
+                {/* Tone Preview 2: Product Hunt */}
+                <div className="p-3.5 rounded-lg border border-border/70 bg-background/50 flex flex-col justify-between space-y-2">
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-semibold text-white">Product Hunt</span>
+                      <span className="text-[10px] text-orange-400 font-mono">&le;60 char tagline</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                      &quot;Turn git commits into customer-facing changelogs &amp; blog posts in seconds.&quot;
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-medium">Fit Score: 98/100</div>
+                </div>
+
+                {/* Tone Preview 3: Reddit */}
+                <div className="p-3.5 rounded-lg border border-border/70 bg-background/50 flex flex-col justify-between space-y-2">
+                  <div>
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-semibold text-white">r/SideProject</span>
+                      <span className="text-[10px] text-blue-400 font-mono">Story / Honest</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
+                      &quot;I hated writing release notes every Friday, so I built a tool that writes them from commits. Brutal feedback welcome.&quot;
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-emerald-400 font-medium">Fit Score: 92/100</div>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400" />
+                  Auto-formatted with unique UTM tracking links per platform
+                </span>
+                <button
+                  onClick={handleCopySample}
+                  className="hover:text-white flex items-center gap-1 transition-colors text-indigo-400"
+                >
+                  {copiedSnippet ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  {copiedSnippet ? "Copied sample" : "Copy HN snippet"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      {/* 2. HOW IT WORKS (3 STEPS) */}
+      <section id="how-it-works" className="py-20 border-t border-border/60 bg-background/40">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 mb-3">
+              Frictionless Process
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              From fresh build to everywhere in 3 steps
+            </h2>
+            <p className="text-muted-foreground mt-3 text-base">
+              You already did the hardest part: building the product. Don&apos;t burn out on 40 hours of repetitive copy-pasting.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
+            {/* Step 1 */}
+            <div className="relative p-6 rounded-2xl border border-border/80 bg-card/40 backdrop-blur-md flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xl mb-5">
+                  01
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Submit Product Free</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Enter your product URL, tagline, tech stack, and audience. We save your draft automatically with no credit card required.
+                </p>
+              </div>
+              <ul className="mt-6 pt-4 border-t border-border/40 space-y-2 text-xs text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-indigo-400" /> Multi-step form with character counters
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-indigo-400" /> Instant draft persistence
+                </li>
+              </ul>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative p-6 rounded-2xl border border-indigo-500/30 bg-card/50 backdrop-blur-md shadow-lg shadow-indigo-500/5 flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xl mb-5">
+                  02
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">AI Analyzes &amp; Tailors Copy</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Our engine matches your product against 50+ platforms across 4 tiers. It generates custom listings respecting each platform&apos;s limits and community rules.
+                </p>
+              </div>
+              <ul className="mt-6 pt-4 border-t border-border/40 space-y-2 text-xs text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-indigo-400" /> HN technical / PH punchy / Reddit story
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-indigo-400" /> Never invents fake metrics or quotes
+                </li>
+              </ul>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative p-6 rounded-2xl border border-border/80 bg-card/40 backdrop-blur-md flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center font-bold text-xl mb-5">
+                  03
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Launch Solo or Done-For-You</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Use our Launch Tracker and hour-by-hour checklists to submit yourself, or upgrade to Done-For-You and let our team manually submit to 50+ platforms in 7 days.
+                </p>
+              </div>
+              <ul className="mt-6 pt-4 border-t border-border/40 space-y-2 text-xs text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-purple-400" /> Live submission proofs &amp; status tracker
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-3.5 h-3.5 text-purple-400" /> Unique UTM attribution links per channel
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. PLATFORMS DIRECTORY (50+ COVERED) */}
+      <section id="platforms" className="py-20 border-t border-border/60">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
+            <div>
+              <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 mb-2">
+                Comprehensive Coverage
+              </Badge>
+              <h2 className="text-3xl font-bold text-white tracking-tight">
+                Platforms We Cover &amp; Tailor For
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+                Every platform has distinct culture, character limits, and audience expectations. We map and score every single one.
+              </p>
+            </div>
+
+            {/* Search Box */}
+            <div className="relative w-full md:w-72">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search platform or category..."
+                value={platformSearch}
+                onChange={(e) => setPlatformSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-lg border border-border bg-card/60 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 text-white placeholder:text-muted-foreground/60"
+              />
+            </div>
+          </div>
+
+          {/* Tier Filter Tabs */}
+          <div className="flex flex-wrap gap-2 mb-8">
+            <button
+              onClick={() => setSelectedTier("all")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedTier === "all"
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                  : "bg-secondary/60 text-muted-foreground hover:text-white"
+              }`}
+            >
+              All Platforms ({SEED_PLATFORMS.length})
+            </button>
+            <button
+              onClick={() => setSelectedTier(1)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedTier === 1
+                  ? "bg-purple-600 text-white shadow-md shadow-purple-600/30"
+                  : "bg-secondary/60 text-muted-foreground hover:text-white"
+              }`}
+            >
+              Tier 1: Big Launches (PH, HN, Reddit)
+            </button>
+            <button
+              onClick={() => setSelectedTier(2)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedTier === 2
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                  : "bg-secondary/60 text-muted-foreground hover:text-white"
+              }`}
+            >
+              Tier 2: Launch Directories
+            </button>
+            <button
+              onClick={() => setSelectedTier(3)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedTier === 3
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-600/30"
+                  : "bg-secondary/60 text-muted-foreground hover:text-white"
+              }`}
+            >
+              Tier 3: SEO &amp; Backlinks (DR 70-90+)
+            </button>
+            <button
+              onClick={() => setSelectedTier(4)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedTier === 4
+                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/30"
+                  : "bg-secondary/60 text-muted-foreground hover:text-white"
+              }`}
+            >
+              Tier 4: Niche (AI, Dev, Content)
+            </button>
+          </div>
+
+          {/* Platforms Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredPlatforms.map((platform) => {
+              const tierVariant =
+                platform.tier === 1
+                  ? "tier1"
+                  : platform.tier === 2
+                  ? "tier2"
+                  : platform.tier === 3
+                  ? "tier3"
+                  : "tier4";
+
+              return (
+                <div
+                  key={platform.slug}
+                  className="p-4 rounded-xl border border-border/80 bg-card/40 backdrop-blur-sm hover:border-indigo-500/40 transition-all flex flex-col justify-between space-y-3 group"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-secondary/80 flex items-center justify-center font-bold text-xs text-white uppercase">
+                          {platform.name.slice(0, 2)}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white group-hover:text-indigo-300 transition-colors flex items-center gap-1.5">
+                            {platform.name}
+                            <a
+                              href={platform.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-muted-foreground hover:text-white"
+                              title="Visit platform"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </h4>
+                          <span className="text-[11px] text-muted-foreground font-mono">
+                            DR {platform.domain_rating} • {platform.is_free ? "Free" : "Paid"}
+                          </span>
+                        </div>
+                      </div>
+                      <Badge variant={tierVariant} className="text-[10px]">
+                        Tier {platform.tier}
+                      </Badge>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground mt-3 line-clamp-2 leading-relaxed">
+                      {platform.tone_notes}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span className="font-mono">
+                      {platform.tagline_limit ? `Tagline ≤${platform.tagline_limit}c` : "No tag limit"}
+                    </span>
+                    <span className="text-[10px] text-amber-400/80 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                      manual verify
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-8 text-center">
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link href="/submit">
+                <span>Have a product ready? Match all {SEED_PLATFORMS.length} platforms free</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. THE INDIE DEV REALITY (COMPARISON TABLE) */}
+      <section className="py-20 border-t border-border/60 bg-background/30">
+        <div className="container mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 mb-2">
+              Why LaunchPilot?
+            </Badge>
+            <h2 className="text-3xl font-bold text-white tracking-tight">
+              Doing it alone vs. with LaunchPilot
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* The Hard Way */}
+            <div className="p-6 rounded-2xl border border-destructive/20 bg-destructive/5 space-y-4">
+              <div className="flex items-center gap-2 text-destructive font-semibold">
+                <span className="text-lg">❌</span> The Painful DIY Way
+              </div>
+              <ul className="space-y-3 text-xs sm:text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive font-bold">•</span>
+                  <span>40+ hours spent manually researching directories, dead links, and signup forms.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive font-bold">•</span>
+                  <span>Accidentally copy-pasting promotional marketing hype into Show HN and getting flagged.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive font-bold">•</span>
+                  <span>Ignoring subreddit self-promo rules and getting banned from r/SideProject or r/SaaS.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-destructive font-bold">•</span>
+                  <span>No UTM links — zero idea which platform brought the paying users.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* The LaunchPilot Way */}
+            <div className="p-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 space-y-4">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                <span className="text-lg">✅</span> The LaunchPilot Way
+              </div>
+              <ul className="space-y-3 text-xs sm:text-sm text-foreground/90">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Submit once in 2 minutes. Instant audience fit scoring across 50+ platforms.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Tone-matched listings (Show HN plain technical, PH punchy, Reddit authentic).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Hour-by-hour launch day checklists and maker comment templates.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>Optional Done-For-You submission by human specialists with proof screenshots.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. PRICING SECTION PREVIEW */}
+      <section id="pricing" className="py-20 border-t border-border/60">
+        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 mb-2">
+              Transparent Pricing
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
+              Start free, upgrade when you want distribution scale
+            </h2>
+            <p className="text-sm text-muted-foreground mt-2">
+              One-time payments unlock features per product. The Growth subscription is account-wide.
+            </p>
+
+            {/* Currency Switcher */}
+            <div className="inline-flex items-center p-1 rounded-xl border border-border bg-card/60 mt-6">
+              <button
+                onClick={() => setCurrency("USD")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  currency === "USD"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                USD ($)
+              </button>
+              <button
+                onClick={() => setCurrency("INR")}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  currency === "INR"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                INR (₹)
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Free */}
+            <div className="p-6 rounded-2xl border border-border/80 bg-card/40 flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white">Free</h3>
+                <p className="text-xs text-muted-foreground mt-1">Test the fit for your product</p>
+                <div className="text-3xl font-extrabold text-white mt-4">$0</div>
+                <ul className="space-y-2.5 text-xs text-muted-foreground mt-6">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Submit product free
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Top 5 platform matches
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> 2 tailored copy samples
+                  </li>
+                  <li className="flex items-center gap-2 text-muted-foreground/50">
+                    <span className="w-3.5 h-3.5 text-center">•</span> Launch tracker locked
+                  </li>
+                </ul>
+              </div>
+              <Button asChild variant="outline" className="w-full mt-6 text-xs">
+                <Link href="/submit">Submit Product Free</Link>
+              </Button>
+            </div>
+
+            {/* Launch Kit */}
+            <div className="p-6 rounded-2xl border border-indigo-500/40 bg-card/60 shadow-lg shadow-indigo-500/5 flex flex-col justify-between relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <Badge variant="brand" className="text-[10px] uppercase font-bold py-0.5">
+                  Most Popular
+                </Badge>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Launch Kit</h3>
+                <p className="text-xs text-muted-foreground mt-1">For founders submitting themselves</p>
+                <div className="text-3xl font-extrabold text-white mt-4">
+                  {currency === "INR" ? "₹1,999" : "$29"}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">one-time</span>
+                </div>
+                <ul className="space-y-2.5 text-xs text-foreground/90 mt-6">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> All 50+ platform matches
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> All tailored copy blocks
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> Big Launch Kit (PH, HN, Reddit)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> Hour-by-hour launch day checklist
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> Interactive Launch Tracker
+                  </li>
+                </ul>
+              </div>
+              <Button asChild variant="brand" className="w-full mt-6 text-xs">
+                <Link href="/pricing">Get Launch Kit</Link>
+              </Button>
+            </div>
+
+            {/* Done-For-You */}
+            <div className="p-6 rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-950/20 to-card/60 flex flex-col justify-between relative">
+              <div>
+                <Badge variant="outline" className="border-purple-500/40 text-purple-300 text-[10px] mb-2">
+                  Full Service
+                </Badge>
+                <h3 className="text-lg font-bold text-white">Done-For-You</h3>
+                <p className="text-xs text-muted-foreground mt-1">We manually submit for you</p>
+                <div className="text-3xl font-extrabold text-white mt-4">
+                  {currency === "INR" ? "₹6,999" : "$99"}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">one-time</span>
+                </div>
+                <ul className="space-y-2.5 text-xs text-foreground/90 mt-6">
+                  <li className="flex items-center gap-2 font-medium text-purple-300">
+                    <Check className="w-3.5 h-3.5 text-purple-400" /> Everything in Launch Kit
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-purple-400" /> We submit to 50+ platforms
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-purple-400" /> 7-day turnaround guarantee
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-purple-400" /> Proof screenshots uploaded
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-purple-400" /> Live submission report
+                  </li>
+                </ul>
+              </div>
+              <Button asChild variant="default" className="w-full mt-6 text-xs bg-purple-600 hover:bg-purple-700">
+                <Link href="/pricing">Get Done-For-You</Link>
+              </Button>
+            </div>
+
+            {/* Growth */}
+            <div className="p-6 rounded-2xl border border-border/80 bg-card/40 flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-white">Growth</h3>
+                <p className="text-xs text-muted-foreground mt-1">Continuous monthly distribution</p>
+                <div className="text-3xl font-extrabold text-white mt-4">
+                  {currency === "INR" ? "₹1,999" : "$29"}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">/month</span>
+                </div>
+                <ul className="space-y-2.5 text-xs text-muted-foreground mt-6">
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Monthly resubmissions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> New directories added monthly
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Feature release launch copy
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Account-wide coverage
+                  </li>
+                </ul>
+              </div>
+              <Button asChild variant="outline" className="w-full mt-6 text-xs">
+                <Link href="/pricing">Subscribe to Growth</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. FAQ ACCORDION */}
+      <section id="faq" className="py-20 border-t border-border/60 bg-background/40">
+        <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 mb-2">
+              Got Questions?
+            </Badge>
+            <h2 className="text-3xl font-bold text-white tracking-tight">
+              Frequently Asked Questions
+            </h2>
+          </div>
+
+          <div className="space-y-3">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+              return (
+                <div
+                  key={index}
+                  className="rounded-xl border border-border/80 bg-card/40 overflow-hidden transition-all"
+                >
+                  <button
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                    className="w-full p-4 sm:p-5 text-left flex items-center justify-between text-sm sm:text-base font-semibold text-white hover:text-indigo-300 transition-colors"
+                  >
+                    <span>{faq.q}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-muted-foreground transition-transform duration-200 ${
+                        isOpen ? "transform rotate-180 text-indigo-400" : ""
+                      }`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-5 sm:px-5 text-xs sm:text-sm text-muted-foreground leading-relaxed border-t border-border/40 pt-3">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. HIGH-CONVERTING BOTTOM CTA */}
+      <section className="py-20 border-t border-border/60 gradient-mesh relative">
+        <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">
+            Stop launching to an empty room.
+          </h2>
+          <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto">
+            Get your product in front of thousands of early adopters, get real backlinks, and start growing today.
+          </p>
+          <div className="pt-2">
+            <Button asChild size="lg" variant="brand" className="gap-2 px-8 py-6 text-base shadow-xl shadow-indigo-500/30">
+              <Link href="/submit">
+                <Rocket className="w-5 h-5" />
+                Submit Your Product Free
+              </Link>
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            No credit card required • Instant AI analysis &amp; top matches
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
