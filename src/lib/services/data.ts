@@ -99,8 +99,11 @@ export class DataService {
 
   // Products
   static async getProducts(userId?: string): Promise<Product[]> {
+    const viewer = await this.getCurrentUser();
+    if (!viewer) return [];
+    if (viewer.role !== "admin") userId = viewer.id;
     try {
-      const supabase = createServerSupabase();
+      const supabase = createAdminClient();
       if (supabase) {
         let query = supabase.from("products").select("*").order("created_at", { ascending: false });
         if (userId) {
@@ -117,17 +120,20 @@ export class DataService {
   }
 
   static async getProduct(id: string): Promise<Product | null> {
-    try {
-      const supabase = createServerSupabase();
-      if (supabase) {
-        const { data, error } = await supabase.from("products").select("*").eq("id", id).single();
-        if (!error && data) return data as Product;
-      }
-    } catch {
-      // Fallback
+    const viewer = await this.getCurrentUser();
+    if (!viewer) return null;
+    const supabase = createAdminClient();
+    if (supabase) {
+      const query = supabase.from("products").select("*").eq("id", id);
+      if (viewer.role !== "admin") query.eq("user_id", viewer.id);
+      const { data, error } = await query.maybeSingle();
+      if (error?.code === "22P02") return null;
+      if (error) throw error;
+      return data as Product | null;
     }
-    if (!isDemoMode()) return null;
-    return mockStore.getProduct(id);
+    if (!isDemoMode()) throw new Error("Database is unavailable");
+    const product = mockStore.getProduct(id);
+    return product && (viewer.role === "admin" || product.user_id === viewer.id) ? product : null;
   }
 
   static async createProduct(userId: string, data: ProductFormData): Promise<Product> {
@@ -139,7 +145,7 @@ export class DataService {
     };
 
     try {
-      const supabase = createServerSupabase();
+      const supabase = createAdminClient();
       if (supabase) {
         const { data: created, error } = await supabase.from("products").insert(newProductData).select().single();
         if (!error && created) return created as Product;
@@ -153,7 +159,7 @@ export class DataService {
 
   static async updateProduct(id: string, updates: Partial<Product>, expectedStatus?: Product["status"]): Promise<Product | null> {
     try {
-      const supabase = createServerSupabase();
+      const supabase = createAdminClient();
       if (supabase) {
         const query = supabase.from("products").update(updates).eq("id", id);
         if (expectedStatus) query.eq("status", expectedStatus);
@@ -172,7 +178,7 @@ export class DataService {
   // Product platforms
   static async getProductPlatforms(productId: string): Promise<ProductPlatform[]> {
     try {
-      const supabase = createServerSupabase();
+      const supabase = createAdminClient();
       if (supabase) {
         const { data, error } = await supabase
           .from("product_platforms")
@@ -201,7 +207,7 @@ export class DataService {
       utm_link,
     }));
 
-    const supabase = createServerSupabase();
+    const supabase = createAdminClient();
     if (supabase) {
       const { error } = await supabase.from("product_platforms").upsert(rows, {
         onConflict: "product_id,platform_id",
@@ -226,7 +232,7 @@ export class DataService {
     updates: Partial<ProductPlatform>
   ): Promise<ProductPlatform | null> {
     try {
-      const supabase = createServerSupabase();
+      const supabase = createAdminClient();
       if (supabase) {
         const { data, error } = await supabase
           .from("product_platforms")
@@ -274,23 +280,56 @@ export class DataService {
     return mockStore.createOrder(order);
   }
 
-  static async updateOrderStatus(orderRef: string, status: Order["status"]): Promise<Order | null> {
-    try {
-      const supabase = createAdminClient();
-      if (supabase) {
-        const { data, error } = await supabase
-          .from("orders")
-          .update({ status })
-          .eq("provider_ref", orderRef)
-          .select()
-          .single();
-
-        if (!error && data) return data as Order;
-      }
-    } catch {
-      // Fallback
+  static async paidPlan(product: Product): Promise<"launch_kit" | "done_for_you" | null> {
+    const admin = createAdminClient();
+    let orders: Pick<Order, "plan">[];
+    if (admin) {
+      const { data, error } = await admin.from("orders").select("plan")
+        .eq("product_id", product.id)
+        .eq("user_id", product.user_id)
+        .eq("status", "completed")
+        .in("plan", ["launch_kit", "done_for_you"]);
+      if (error) throw error;
+      orders = data;
+    } else if (isDemoMode()) {
+      orders = mockStore.getOrders().filter((order) =>
+        order.product_id === product.id && order.user_id === product.user_id && order.status === "completed"
+      );
+    } else {
+      throw new Error("Database is unavailable");
     }
-    if (!isDemoMode()) return null;
-    return mockStore.updateOrderStatus(orderRef, status);
+
+    if (orders.some(({ plan }) => plan === "done_for_you")) return "done_for_you";
+    return orders.some(({ plan }) => plan === "launch_kit") ? "launch_kit" : null;
+  }
+
+  static async completeOrder(provider: "stripe" | "razorpay", ref: string, amount: number, currency: "USD" | "INR"): Promise<Order | null> {
+    const admin = createAdminClient();
+    if (admin) {
+      const { data, error } = await admin.rpc("complete_launchpilot_order", {
+        payment_provider: provider,
+        payment_ref: ref,
+        payment_amount: amount,
+        payment_currency: currency,
+      });
+      if (error) throw error;
+      return (data as Order[])[0] ?? null;
+    }
+    if (!isDemoMode()) throw new Error("Database is unavailable");
+    const order = mockStore.getOrders().find((row) => row.provider_ref === ref && row.provider === provider);
+    if (!order || order.amount !== amount || order.currency !== currency) throw new Error("Payment does not match order");
+    return order.status === "pending" ? mockStore.updateOrderStatus(ref, "completed") : null;
+  }
+
+  static async getReceiptRecipient(order: Order) {
+    const admin = createAdminClient();
+    if (!admin) return null;
+    const { data: profile, error } = await admin.from("profiles").select("email,name")
+      .eq("id", order.user_id).maybeSingle();
+    if (error) throw error;
+    const { data: product } = order.product_id
+      ? await admin.from("products").select("name").eq("id", order.product_id).eq("user_id", order.user_id).maybeSingle()
+      : { data: null };
+    return profile ? { email: profile.email, name: profile.name, productName: product?.name ?? "Your product" } : null;
   }
 }

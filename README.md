@@ -7,7 +7,7 @@
 
 ## ⚡ Overview
 
-LaunchPilot solves the most agonizing bottleneck for software developers: **distribution**. A founder submits their product once. The app analyzes which launch platforms fit the product best, writes bespoke copy tailored to each community's tone and character limits, provides an execution-ready launch kit with hour-by-hour checklists, and tracks live listings with custom UTM parameters. On paid plans, our human team conducts manual submissions to eligible directories with screenshot proofs.
+LaunchPilot solves the most agonizing bottleneck for software developers: **distribution**. A founder submits their product once. The app analyzes which launch platforms fit the product best, writes bespoke copy tailored to each community's tone and character limits, provides an execution-ready launch kit with hour-by-hour checklists, and tracks live listings with custom UTM parameters. On the Done-For-You plan, our team submits to eligible directories and records submission evidence in the tracker.
 
 ### 🌟 Key Features
 - **One-Time Multi-Step Submission (`/submit`)**: 4-step wizard with real-time character limit enforcement (tagline $\le 60$, short description $\le 260$), draft auto-save to local storage, asset management, and authentication gate.
@@ -23,8 +23,8 @@ LaunchPilot solves the most agonizing bottleneck for software developers: **dist
   - Free preview: top 5 matches and 2 copy samples, rest blurred with paywall CTA.
 - **Interactive Launch Tracker (`/product/[id]/tracker`)**: Live status tracker (`not started`, `submitted`, `pending review`, `live`, `rejected`), live listing URL input, unique UTM parameters (`?utm_source={slug}&utm_campaign=launchpilot`), and dynamic completion progress bar.
 - **Multi-Currency Payments Abstraction**:
-  - **Stripe** for USD ($29 Launch Kit, $99 Done-For-You, $29/mo Growth).
-  - **Razorpay** for INR (₹1,999 Launch Kit, ₹6,999 Done-For-You, ₹1,999/mo Growth).
+  - **Stripe** for USD ($29 Launch Kit, $99 Done-For-You).
+  - **Razorpay** for INR (₹1,999 Launch Kit, ₹6,999 Done-For-You).
   - Cryptographic webhook verification (`/api/webhooks/stripe`, `/api/webhooks/razorpay`) unlocking product features upon confirmed payment.
 - **Role-Based Admin Console (`/admin`)**:
   - Live Done-For-You queue management with team member assignment.
@@ -205,7 +205,7 @@ The database is pre-seeded with 35 high-impact platforms categorized into 4 tier
 ## 🔒 Security & Quality Standards
 
 - **Row Level Security (RLS)**: Enforced across all tables in Postgres. Founders can only query and edit their own products and tracker rows; admins have global queue access.
-- **Payment Signature Verification**: Stripe webhooks verify signatures with `stripe.webhooks.constructEvent()`; Razorpay webhooks verify signatures with cryptographic HMAC SHA-256. Features unlock only upon valid signature confirmation.
+- **Payment Signature Verification**: Stripe webhooks verify signatures with `stripe.webhooks.constructEvent()`; Razorpay webhooks verify signatures with cryptographic HMAC SHA-256. Features unlock after a verified, settled payment matches the stored order amount and currency. Product-specific access comes from the completed order, independently of tracker progress.
 - **Strict Anti-Hallucination AI Guardrails**: The AI analysis engine is prompted with strict constraints: never fabricate user testimonials or metrics; strictly observe character limits ($\le 60$ for PH taglines, $\le 260$ for descriptions).
 - **Zod Validation & Auto-Retry**: Analysis responses are strictly parsed with Zod schemas; malformed JSON triggers an automatic retry.
 - **Responsive & Accessible**: Dark-mode friendly, mobile responsive navigation, accessible Radix UI primitives, loading states, and error handling.
@@ -220,9 +220,17 @@ The database is pre-seeded with 35 high-impact platforms categorized into 4 tier
 4. Set the webhook endpoints in your Stripe and Razorpay dashboards:
    - Stripe: `https://your-domain.vercel.app/api/webhooks/stripe`
    - Razorpay: `https://your-domain.vercel.app/api/webhooks/razorpay`
+
+### Billing rollout
+
+Apply all Supabase migrations, including `20261118100000_enforce_paid_reports.sql`, with this app version. The migration moves product, tracker, and order table access behind authenticated server routes and adds transactional fulfillment. Set `SUPABASE_SERVICE_ROLE_KEY` as a server-only value and set `NEXT_PUBLIC_APP_URL` to the deployed origin.
+
+In staging, register Stripe `checkout.session.completed` and `checkout.session.async_payment_succeeded`, and Razorpay `payment.captured` (with capture enabled). Verify both payment flows in provider test mode, including the pending report, fulfilled order, and Done-For-You queue. Review existing completed orders against provider records before relying on their historical status. New Growth subscriptions are paused. Existing subscriptions require an operator review in the payment dashboard.
+
+
 5. Deploy!
 
 
 ### Local demo and production access
 
-Set NEXT_PUBLIC_LAUNCHPILOT_DEMO=true with npm run dev and placeholder service credentials for the local demo. Apply both Supabase migrations to staging. Production submission, checkout, and admin requests require a Supabase session. Admin APIs verify the profile role on the server.
+Set NEXT_PUBLIC_LAUNCHPILOT_DEMO=true with npm run dev and placeholder service credentials for the local demo. Apply all Supabase migrations to staging. Production submission, checkout, and admin requests require a Supabase session. Admin APIs verify the profile role on the server.

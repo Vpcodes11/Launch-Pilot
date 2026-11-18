@@ -1,8 +1,6 @@
 /**
- * LaunchPilot Production Deployment Verification & Comprehensive E2E Test Suite
- * Executes real HTTP requests against the live production build to ensure every
- * page, API route, payment abstraction, AI analysis pipeline, and admin flow is
- * completely functional.
+ * LaunchPilot local demo smoke tests
+ * Run against an isolated NEXT_PUBLIC_LAUNCHPILOT_DEMO=true development server.
  */
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
@@ -46,6 +44,7 @@ async function main() {
   console.log("========================================================\n");
 
   let createdProductId = "";
+  let previewSlug = "";
 
   // 1. PUBLIC PAGES RENDERING & SEO
   await runTest("Landing Page (/) renders with 200 OK & SEO meta tags", async () => {
@@ -80,7 +79,6 @@ async function main() {
     const html = await res.text();
     assert(html.includes("Launch Kit"), "Launch Kit plan missing");
     assert(html.includes("Done-For-You"), "Done-For-You plan missing");
-    assert(html.includes("Growth"), "Growth plan missing");
   });
 
   await runTest("Admin Console (/admin) renders with 200 OK", async () => {
@@ -156,7 +154,9 @@ async function main() {
     const analysis = data.analysis;
     // Check top matches
     assert(Array.isArray(analysis.top_matches), "top_matches is not an array");
-    assert(analysis.top_matches.length >= 10, `Expected at least 10 matches, got ${analysis.top_matches.length}`);
+    assert(analysis.top_matches.length === 5, "Free preview should show five matches");
+
+    previewSlug = analysis.top_matches[0].platform_slug;
 
     // Check fit scores
     for (const match of analysis.top_matches) {
@@ -167,20 +167,8 @@ async function main() {
 
     // Check tailored copy
     assert(Boolean(analysis.tailored_copies), "tailored_copies missing");
-    const phCopy = analysis.tailored_copies["producthunt"];
-    assert(Boolean(phCopy), "Product Hunt tailored copy missing");
-    assert(phCopy.title_or_tagline.length <= 60, `PH tagline exceeded 60 chars: ${phCopy.title_or_tagline.length}`);
-    assert(Boolean(phCopy.maker_comment), "PH maker first comment missing");
-
-    // Check Big Launch Kit
-    assert(Boolean(analysis.big_launch_kit), "Big launch kit missing");
-    assert(analysis.big_launch_kit.product_hunt.tagline_options.length >= 2, "Missing PH tagline options");
-    assert(Boolean(analysis.big_launch_kit.show_hn.title), "Missing Show HN title");
-    assert(analysis.big_launch_kit.show_hn.title.startsWith("Show HN:"), "Show HN title must start with 'Show HN:'");
-    assert(analysis.big_launch_kit.reddit.length === 3, `Expected 3 Reddit drafts, got ${analysis.big_launch_kit.reddit.length}`);
-    for (const r of analysis.big_launch_kit.reddit) {
-      assert(Boolean(r.rules_warning), `Missing self-promo rules warning for ${r.subreddit}`);
-    }
+    assert(Object.keys(analysis.tailored_copies).length <= 2, "Free preview must include at most two drafts");
+    assert(!analysis.big_launch_kit, "Paid launch kit must be absent from the free preview");
   });
 
   await runTest("GET /product/[id] report view renders with 200 OK", async () => {
@@ -196,7 +184,7 @@ async function main() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         productId: createdProductId,
-        platformSlug: "hackernews",
+        platformSlug: previewSlug,
         customInstruction: "Focus on zero-overhead WebAssembly recording architecture",
       }),
     });
@@ -287,32 +275,12 @@ async function main() {
     assert(data.razorpayOptions.amount === 699900, `Expected 699900 paise, got ${data.razorpayOptions.amount}`);
   });
 
-  await runTest("POST /api/webhooks/stripe unlocks product upon confirmed payment", async () => {
-    const mockSessionId = `cs_test_deploy_verify_${Date.now()}`;
-    const webhookPayload = JSON.stringify({
-      id: mockSessionId,
-      metadata: {
-        userId: "usr-demo-founder",
-        productId: createdProductId,
-        plan: "launch_kit",
-      },
-    });
-
-    const res = await fetch(`${BASE_URL}/api/webhooks/stripe`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "stripe-signature": "test_sig_dev",
-      },
-      body: webhookPayload,
-    });
-
-    assert(res.status === 200, `Expected 200, got ${res.status}`);
-
-    // Verify product is now marked 'paid'
-    const prodRes = await fetch(`${BASE_URL}/api/products/${createdProductId}`);
-    const prodData = await prodRes.json();
-    assert(prodData.product.status === "paid", `Expected status 'paid' after payment, got ${prodData.product.status}`);
+  await runTest("Completed demo orders unlock the report and tracked fulfillment", async () => {
+    const response = await fetch(BASE_URL + "/api/products/" + createdProductId);
+    const data = await response.json();
+    assert(data.paidPlan === "done_for_you", "Expected a completed Done-For-You order");
+    assert(data.product.ai_analysis.top_matches.length > 5, "Full shortlist missing");
+    assert(Boolean(data.product.ai_analysis.big_launch_kit?.show_hn?.title), "Paid launch kit missing");
   });
 
   // 6. ADMIN CONSOLE & PLATFORM DATABASE CRUD

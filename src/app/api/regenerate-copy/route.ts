@@ -15,6 +15,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
+    const matches = product.ai_analysis?.top_matches ?? [];
+    const allowedMatches = await DataService.paidPlan(product) ? matches : matches.slice(0, 2);
+    if (!allowedMatches.some((match) => match.platform_slug === platformSlug)) {
+      return NextResponse.json({ error: "This draft is not included in your report access" }, { status: 403 });
+    }
     const platform = await DataService.getPlatform(platformSlug);
     if (!platform) {
       return NextResponse.json({ error: "Platform not found" }, { status: 404 });

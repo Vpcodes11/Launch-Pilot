@@ -10,59 +10,56 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product } from "@/types";
 import { toast } from "sonner";
+import type { CheckoutResult } from "@/lib/payments/types";
+import { openCheckout } from "@/lib/payments/client-checkout";
 
 export default function PricingPage() {
   const [currency, setCurrency] = useState<"USD" | "INR">("USD");
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [loadingCheckout, setLoadingCheckout] = useState<string | null>(null);
+  const [productState, setProductState] = useState<"loading" | "signed-out" | "ready" | "error">("loading");
 
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const res = await fetch("/api/products");
-        const data = await res.json();
-        if (data.products && data.products.length > 0) {
-          setProducts(data.products);
-          setSelectedProductId(data.products[0].id);
+        const response = await fetch("/api/products", { cache: "no-store" });
+        if (response.status === 401) {
+          setProductState("signed-out");
+          return;
         }
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        const list: Product[] = data.products;
+        const requested = new URLSearchParams(window.location.search).get("product");
+        setProducts(list);
+        setSelectedProductId(requested ? list.find((product) => product.id === requested)?.id ?? "" : list[0]?.id ?? "");
+        setProductState("ready");
       } catch {
-        // ignore
+        setProductState("error");
       }
     }
-    fetchProducts();
+    void fetchProducts();
   }, []);
 
-  const handleCheckout = async (plan: "launch_kit" | "done_for_you" | "growth") => {
+  async function handleCheckout(plan: "launch_kit" | "done_for_you") {
+    if (!selectedProductId || loadingCheckout) return;
     setLoadingCheckout(plan);
     try {
-      const res = await fetch("/api/checkout", {
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan,
-          productId: selectedProductId || undefined,
-          currency,
-        }),
+        body: JSON.stringify({ plan, productId: selectedProductId, currency }),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to start checkout");
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        toast.success(`Plan ${plan} unlocked successfully!`);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err instanceof Error ? err.message : "Checkout error occurred.");
+      const checkout: CheckoutResult & { error?: string; successUrl: string } = await response.json();
+      if (!response.ok) throw new Error(checkout.error || "Could not start checkout.");
+      await openCheckout(checkout);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not start checkout.");
     } finally {
       setLoadingCheckout(null);
     }
-  };
+  }
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-16">
@@ -75,7 +72,7 @@ export default function PricingPage() {
           Simple, transparent pricing for indie devs
         </h1>
         <p className="text-base text-muted-foreground">
-          One-time payments unlock features per product. The Growth subscription is per account.
+          Choose a one-time purchase for the product you want to launch.
         </p>
 
         {/* Currency Switcher */}
@@ -102,15 +99,23 @@ export default function PricingPage() {
           </button>
         </div>
 
+        <div id="checkout" className="scroll-mt-24" />
+        {productState === "loading" && <p role="status" className="text-sm text-slate-300">Loading products…</p>}
+        {productState === "signed-out" && <Button asChild variant="outline"><Link href="/dashboard">Sign in to purchase</Link></Button>}
+        {productState === "ready" && products.length === 0 && <Button asChild variant="outline"><Link href="/submit">Add a product to purchase</Link></Button>}
+        {productState === "error" && <p role="alert" className="text-sm text-rose-300">Could not load your products. Refresh the page to try again.</p>}
         {/* Product Selector if available */}
         {products.length > 0 && (
           <div className="pt-2 flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span>Applying plan to:</span>
             <select
+              aria-label="Product for checkout"
+              disabled={loadingCheckout !== null}
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
               className="bg-background/80 border border-border rounded-lg px-2.5 py-1 text-white font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500"
             >
+              <option value="" disabled>Choose a product</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -122,7 +127,7 @@ export default function PricingPage() {
       </div>
 
       {/* Pricing Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* FREE */}
         <div className="p-6 rounded-2xl border border-border/80 bg-card/40 flex flex-col justify-between">
           <div>
@@ -168,7 +173,7 @@ export default function PricingPage() {
             </div>
             <ul className="space-y-3 text-xs text-foreground/90 mt-6">
               <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-indigo-400" /> All 35 platform matches
+                <Check className="w-3.5 h-3.5 text-indigo-400" /> Full shortlist platform matches
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-indigo-400" /> All tailored copy blocks
@@ -186,7 +191,7 @@ export default function PricingPage() {
           </div>
           <Button
             variant="brand"
-            disabled={loadingCheckout === "launch_kit"}
+            disabled={!selectedProductId || loadingCheckout !== null}
             onClick={() => handleCheckout("launch_kit")}
             className="w-full mt-8 text-xs"
           >
@@ -232,7 +237,7 @@ export default function PricingPage() {
           </div>
           <Button
             variant="default"
-            disabled={loadingCheckout === "done_for_you"}
+            disabled={!selectedProductId || loadingCheckout !== null}
             onClick={() => handleCheckout("done_for_you")}
             className="w-full mt-8 text-xs bg-purple-600 hover:bg-purple-700"
           >
@@ -244,44 +249,16 @@ export default function PricingPage() {
           </Button>
         </div>
 
-        {/* GROWTH */}
-        <div className="p-6 rounded-2xl border border-border/80 bg-card/40 flex flex-col justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-white">Growth</h3>
-            <p className="text-xs text-muted-foreground mt-1">Continuous monthly distribution</p>
-            <div className="text-3xl font-extrabold text-white mt-4">
-              {currency === "INR" ? "₹1,999" : "$29"}
-              <span className="text-xs font-normal text-muted-foreground ml-1">/mo</span>
-            </div>
-            <ul className="space-y-3 text-xs text-muted-foreground mt-6">
-              <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-emerald-400" /> Monthly resubmissions
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-emerald-400" /> New directories automatically added
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-emerald-400" /> Feature release launch copy
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-emerald-400" /> Account-wide coverage
-              </li>
-            </ul>
-          </div>
-          <Button
-            variant="outline"
-            disabled={loadingCheckout === "growth"}
-            onClick={() => handleCheckout("growth")}
-            className="w-full mt-8 text-xs"
-          >
-            {loadingCheckout === "growth" ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              "Subscribe to Growth"
-            )}
-          </Button>
-        </div>
       </div>
+
+      <section aria-labelledby="delivery-scope" className="rounded-2xl border border-indigo-400/25 bg-indigo-400/5 p-6 sm:p-8">
+        <h2 id="delivery-scope" className="text-xl font-semibold text-white">What Done-For-You delivers</h2>
+        <div className="mt-5 grid gap-5 text-sm leading-relaxed text-slate-300 md:grid-cols-3">
+          <div><h3 className="mb-1 font-semibold text-white">Directory eligibility</h3>We review your product against directory requirements. Community posts stay with the founder.</div>
+          <div><h3 className="mb-1 font-semibold text-white">Submission window</h3>We aim to submit to eligible directories within seven business days. Each directory sets its own review timeline.</div>
+          <div><h3 className="mb-1 font-semibold text-white">Proof in your tracker</h3>Follow submission status, see proof where available, and open listings once a directory approves them.</div>
+        </div>
+      </section>
 
       {/* Feature Comparison Matrix */}
       <div className="pt-12">
@@ -289,36 +266,32 @@ export default function PricingPage() {
           Feature Comparison
         </h2>
 
-        <div className="rounded-2xl border border-border/80 bg-card/50 overflow-hidden shadow-lg">
+        <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card/50 shadow-lg">
           <table className="w-full text-left text-xs">
             <thead className="bg-secondary/60 text-muted-foreground uppercase text-[10px] font-semibold border-b border-border">
               <tr>
                 <th className="p-4">Feature</th>
                 <th className="p-4 text-center">Free</th>
-                <th className="p-4 text-center">Launch Kit ($29)</th>
-                <th className="p-4 text-center text-purple-300">Done-For-You ($99)</th>
-                <th className="p-4 text-center">Growth ($29/mo)</th>
+                <th className="p-4 text-center">Launch Kit</th>
+                <th className="p-4 text-center text-purple-300">Done-For-You</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               <tr>
                 <td className="p-4 font-medium text-white">Platform Fit Scoring</td>
                 <td className="p-4 text-center text-muted-foreground">Top 5</td>
-                <td className="p-4 text-center text-emerald-400">All 35</td>
-                <td className="p-4 text-center text-emerald-400">All 35</td>
-                <td className="p-4 text-center text-emerald-400">All 35 + New</td>
+                <td className="p-4 text-center text-emerald-400">Full shortlist</td>
+                <td className="p-4 text-center text-emerald-400">Full shortlist</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Tailored Copy Blocks</td>
                 <td className="p-4 text-center text-muted-foreground">2 Samples</td>
-                <td className="p-4 text-center text-emerald-400">All 35</td>
-                <td className="p-4 text-center text-emerald-400">All 35</td>
-                <td className="p-4 text-center text-emerald-400">All 35</td>
+                <td className="p-4 text-center text-emerald-400">Full shortlist</td>
+                <td className="p-4 text-center text-emerald-400">Full shortlist</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Big Launch Kit (PH, HN, Reddit)</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
-                <td className="p-4 text-center text-emerald-400">✓ Included</td>
                 <td className="p-4 text-center text-emerald-400">✓ Included</td>
                 <td className="p-4 text-center text-emerald-400">✓ Included</td>
               </tr>
@@ -327,19 +300,16 @@ export default function PricingPage() {
                 <td className="p-4 text-center text-muted-foreground">—</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
                 <td className="p-4 text-center font-bold text-purple-400">Eligible directories</td>
-                <td className="p-4 text-center font-bold text-purple-400">Eligible directories &amp; monthly</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Proof Screenshots &amp; Live URLs</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
                 <td className="p-4 text-center text-emerald-400">✓ Included</td>
-                <td className="p-4 text-center text-emerald-400">✓ Included</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Unique UTM Link Attribution</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
-                <td className="p-4 text-center text-emerald-400">✓ Included</td>
                 <td className="p-4 text-center text-emerald-400">✓ Included</td>
                 <td className="p-4 text-center text-emerald-400">✓ Included</td>
               </tr>

@@ -70,7 +70,6 @@ def run_tests():
         page.goto(f"{base_url}/pricing", wait_until="networkidle")
         assert page.locator("text=Launch Kit").count() > 0
         assert page.locator("text=Done-For-You").count() > 0
-        assert page.locator("text=Growth").count() > 0
 
         # Check USD prices
         assert page.locator("text=$29").count() > 0
@@ -173,10 +172,15 @@ def run_tests():
         assert page.locator("text=Unlock Launch Kit for $29 / ₹1,999").count() > 0
         print("  ✓ Big Launch Kit paywall verified for free preview tier.")
 
-        # Test Unlocked State via successful payment redirect parameter
-        print("  • Testing unlocked Big Launch Kit via payment=success flow...")
-        page.goto(f"{base_url}/product/prod-demo-1?payment=success", wait_until="networkidle")
-        page.wait_for_timeout(600)
+        # Purchase through the local demo checkout.
+        checkout = page.request.post(f"{base_url}/api/checkout", data={
+            "plan": "launch_kit",
+            "productId": "prod-demo-1",
+            "currency": "USD",
+        })
+        assert checkout.ok, checkout.text()
+        page.goto(checkout.json()["successUrl"], wait_until="networkidle")
+        page.get_by_text("Payment confirmed. Your purchase is available here.").wait_for()
 
         # Switch to Big Launch Kit tab
         kit_tab_unlocked = page.locator("button:has-text('Big Launch Kit')").first

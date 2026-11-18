@@ -433,7 +433,7 @@ export default function LandingPage() {
               Start free, upgrade when you want distribution scale
             </h2>
             <p className="text-sm text-muted-foreground mt-2">
-              One-time payments unlock features per product. The Growth subscription is account-wide.
+              One-time payments unlock features per product.
             </p>
 
             {/* Currency Switcher */}
@@ -461,7 +461,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Free */}
             <div className="p-6 rounded-2xl border border-border/80 bg-card/40 flex flex-col justify-between">
               <div>
@@ -504,7 +504,7 @@ export default function LandingPage() {
                 </div>
                 <ul className="space-y-2.5 text-xs text-foreground/90 mt-6">
                   <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-indigo-400" /> All 35 platform matches
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> Full ranked shortlist
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-indigo-400" /> All tailored copy blocks
@@ -560,34 +560,6 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            {/* Growth */}
-            <div className="p-6 rounded-2xl border border-border/80 bg-card/40 flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-white">Growth</h3>
-                <p className="text-xs text-muted-foreground mt-1">Continuous monthly distribution</p>
-                <div className="text-3xl font-extrabold text-white mt-4">
-                  {currency === "INR" ? "₹1,999" : "$29"}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">/month</span>
-                </div>
-                <ul className="space-y-2.5 text-xs text-muted-foreground mt-6">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Monthly resubmissions
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> New directories added monthly
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Feature release launch copy
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400" /> Account-wide coverage
-                  </li>
-                </ul>
-              </div>
-              <Button asChild variant="outline" className="w-full mt-6 text-xs">
-                <Link href="/pricing">Subscribe to Growth</Link>
-              </Button>
-            </div>
           </div>
         </div>
       </section>

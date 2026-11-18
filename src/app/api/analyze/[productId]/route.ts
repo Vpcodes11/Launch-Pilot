@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataService } from "@/lib/services/data";
+import { previewAnalysis } from "@/lib/services/report-access";
 import { AIAnalyzer } from "@/lib/ai/analyzer";
 import { EmailService } from "@/lib/email/resend";
 import { ProductPlatform } from "@/types";
@@ -35,7 +36,7 @@ export async function POST(
       if (!platformsBySlug.has(platform_slug) || seen.has(platform_slug)) return false;
       seen.add(platform_slug);
       return true;
-    });
+    }).sort((a, b) => b.score - a.score).slice(0, 20);
 
     const matchedItems: ProductPlatform[] = analysis.top_matches.map((match) => {
       const platform = platformsBySlug.get(match.platform_slug)!;
@@ -64,6 +65,9 @@ export async function POST(
       };
     });
 
+    analysis.tailored_copies = Object.fromEntries(matchedItems.map((item, index) =>
+      [analysis.top_matches[index].platform_slug, item.generated_copy]
+    ));
     await DataService.savePlatformMatches(product.id, matchedItems);
     const promoted = product.status === "draft"
       ? await DataService.updateProduct(productId, { ai_analysis: analysis, status: "analyzed" }, "draft")
@@ -83,9 +87,11 @@ export async function POST(
       console.warn("Failed sending analysis email:", e);
     }
 
+    const paidPlan = await DataService.paidPlan(updated);
     return NextResponse.json({
       success: true,
-      analysis,
+      analysis: previewAnalysis(analysis, paidPlan !== null),
+      paidPlan,
       topMatchesCount: analysis.top_matches.length,
       productStatus: updated.status,
     });

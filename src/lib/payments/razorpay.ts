@@ -18,7 +18,7 @@ export class RazorpayProvider {
   }
 
   static async createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutResult> {
-    const razorpay = this.getClient();
+    const razorpay = isDemoMode() ? null : this.getClient();
     const planConfig = PLAN_CONFIGS[params.plan];
     const amountInPaise = planConfig.inrAmount * 100;
 
@@ -55,11 +55,11 @@ export class RazorpayProvider {
     if (!isDemoMode()) throw new Error("Payment provider is unavailable");
 
     // Local demo checkout
-    const mockOrderId = `order_rp_${Date.now()}`;
+    const mockOrderId = `order_rp_${crypto.randomUUID()}`;
     return {
       provider: "razorpay",
       orderId: mockOrderId,
-      url: `${params.successUrl}?session_id=${mockOrderId}&mock=true`,
+      url: params.successUrl,
       razorpayOptions: {
         key: "rzp_test_mock123",
         amount: amountInPaise,
@@ -79,23 +79,7 @@ export class RazorpayProvider {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
     if (!secret || secret.includes("your-key")) {
-      if (!isDemoMode()) {
-        return { verified: false, status: "failed", error: "Webhook verification unavailable" };
-      }
-      try {
-        const payload = JSON.parse(rawBody);
-        return {
-          verified: true,
-          orderId: payload?.payload?.payment?.entity?.order_id || "mock-order-id",
-          providerRef: payload?.payload?.payment?.entity?.id || "mock-pay-id",
-          userId: payload?.payload?.payment?.entity?.notes?.userId,
-          productId: payload?.payload?.payment?.entity?.notes?.productId,
-          plan: payload?.payload?.payment?.entity?.notes?.plan,
-          status: "completed",
-        };
-      } catch {
-        return { verified: false, status: "failed", error: "Missing Razorpay webhook secret" };
-      }
+      return { verified: false, status: "failed", error: "Webhook verification unavailable" };
     }
 
     try {
@@ -104,7 +88,8 @@ export class RazorpayProvider {
         .update(rawBody)
         .digest("hex");
 
-      if (expectedSignature !== signature) {
+      if (!/^[0-9a-f]{64}$/i.test(signature) ||
+        !crypto.timingSafeEqual(Buffer.from(expectedSignature, "hex"), Buffer.from(signature, "hex"))) {
         return { verified: false, status: "failed", error: "Invalid Razorpay HMAC signature" };
       }
 
@@ -113,19 +98,11 @@ export class RazorpayProvider {
 
       if (event === "order.paid" || event === "payment.captured") {
         const payment = payload.payload?.payment?.entity;
-        return {
-          verified: true,
-          orderId: payment?.order_id,
-          providerRef: payment?.id,
-          userId: payment?.notes?.userId,
-          productId: payment?.notes?.productId,
-          plan: payment?.notes?.plan,
-          amount: (payment?.amount || 0) / 100,
-          currency: "INR",
-          status: "completed",
-        };
+        if (payment?.status === "captured" && payment.currency === "INR" && typeof payment.order_id === "string"
+          && Number.isSafeInteger(payment.amount) && payment.amount > 0) {
+          return { verified: true, orderId: payment.order_id, amount: payment.amount / 100, currency: "INR", status: "completed" };
+        }
       }
-
       return { verified: true, status: "ignored" };
     } catch (err) {
       return {

@@ -30,9 +30,10 @@ export async function GET() {
       .reduce((sum, o) => sum + Number(o.amount), 0);
 
     // Paid Done-For-You Queue
-    const paidProducts = products.filter(
-      (p) => p.status === "paid" || p.status === "in_progress" || p.status === "launched"
-    );
+    const fulfilledProductIds = new Set(orders
+      .filter((order) => order.status === "completed" && order.plan === "done_for_you")
+      .map((order) => order.product_id));
+    const paidProducts = products.filter((product) => fulfilledProductIds.has(product.id));
 
     return NextResponse.json({
       success: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -26,7 +26,7 @@ import { toast } from "sonner";
 
 export default function ProductReportPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
+  const router = useRouter();
   const productId = params?.id as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -42,8 +42,9 @@ export default function ProductReportPage() {
   const [regeneratingSlug, setRegeneratingSlug] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  // Paywall state: check if product is paid or user unlocked
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [paidPlan, setPaidPlan] = useState<"launch_kit" | "done_for_you" | null>(null);
+  const isUnlocked = paidPlan !== null;
+  const [paymentMessage, setPaymentMessage] = useState<"idle" | "pending" | "waiting" | "confirmed" | "cancelled">("idle");
 
   const runAnalysis = useCallback(async () => {
     setAnalyzing(true);
@@ -63,6 +64,7 @@ export default function ProductReportPage() {
         ai_analysis: data.analysis,
         status: data.productStatus ?? prev.status,
       } : prev);
+      setPaidPlan(data.paidPlan ?? null);
       setAnalysisProgress(100);
       toast.success("Launch report ready");
     } catch (err) {
@@ -75,47 +77,52 @@ export default function ProductReportPage() {
   }, [productId]);
 
   useEffect(() => {
+    const controller = new AbortController();
+    const query = new URLSearchParams(window.location.search);
+    const pending = query.get("payment") === "pending";
+    const requestedPlan = query.get("plan");
+    let timer: ReturnType<typeof setTimeout>;
+    let checks = 0;
+
+    setPaymentMessage(pending ? "pending" : query.get("payment") === "cancelled" ? "cancelled" : "idle");
+    setLoading(true);
+
+    function continueChecking() {
+      if (controller.signal.aborted) return;
+      if (checks < 10) timer = setTimeout(() => void loadProduct(), 2500);
+      else setPaymentMessage("waiting");
+    }
+
     async function loadProduct() {
+      checks += 1;
       try {
-        const res = await fetch(`/api/products/${productId}`);
-        const data = await res.json();
-        if (data.product) {
-          setProduct(data.product);
+        const response = await fetch("/api/products/" + productId, { cache: "no-store", signal: controller.signal });
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (controller.signal.aborted) return;
+        const access = data.paidPlan ?? null;
+        setProduct(data.product);
+        setPaidPlan(access);
+        if (checks === 1 && !data.product.ai_analysis) void runAnalysis();
 
-          // Check if paid or has unlock flag
-          const isPaid =
-            data.product.status === "paid" ||
-            data.product.status === "in_progress" ||
-            data.product.status === "launched" ||
-            localStorage.getItem(`unlocked_${productId}`) === "true";
-
-          setIsUnlocked(isPaid);
-
-          // If no analysis yet, run it
-          if (!data.product.ai_analysis) {
-            runAnalysis();
-          }
+        if (pending) {
+          const confirmed = access === "done_for_you" || (access === "launch_kit" && requestedPlan !== "done_for_you");
+          if (confirmed) setPaymentMessage("confirmed");
+          else continueChecking();
         }
-      } catch (e) {
-        console.error(e);
+      } catch {
+        if (!controller.signal.aborted && pending) continueChecking();
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
 
-    if (productId) {
-      loadProduct();
-    }
+    if (productId) void loadProduct();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [productId, runAnalysis]);
-
-  // Handle payment redirect parameter
-  useEffect(() => {
-    if (searchParams.get("payment") === "success") {
-      setIsUnlocked(true);
-      localStorage.setItem(`unlocked_${productId}`, "true");
-      toast.success("Payment successful! Full Launch Kit and all 35 platforms unlocked.");
-    }
-  }, [searchParams, productId]);
 
   const handleCopyText = async (text: string, key: string) => {
     try {
@@ -165,31 +172,9 @@ export default function ProductReportPage() {
     }
   };
 
-  const handleUnlockPlan = async (plan: "launch_kit" | "done_for_you") => {
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan,
-          productId,
-          currency: "USD",
-        }),
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        // Fallback for instant unlock in demo mode
-        setIsUnlocked(true);
-        localStorage.setItem(`unlocked_${productId}`, "true");
-        toast.success("Unlocked successfully!");
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error("Checkout failed. Please try again.");
-    }
+  const handleUnlockPlan = (plan: "launch_kit" | "done_for_you") => {
+    const selection = new URLSearchParams({ product: productId, plan });
+    router.push("/pricing?" + selection.toString() + "#checkout");
   };
 
   if (loading) {
@@ -275,6 +260,11 @@ export default function ProductReportPage() {
             {analyzing ? "Analyzing…" : analysis ? "Rerun analysis" : "Run analysis"}
           </Button>
 
+          {paidPlan === "launch_kit" && (
+            <Button variant="outline" size="sm" onClick={() => handleUnlockPlan("done_for_you")}>
+              View Done-For-You
+            </Button>
+          )}
           {!isUnlocked && (
             <Button
               variant="brand"
@@ -283,11 +273,25 @@ export default function ProductReportPage() {
               className="gap-1.5 text-xs shadow-md shadow-indigo-500/20"
             >
               <Sparkles className="w-4 h-4" />
-              Unlock All 35 Platforms ($29)
+              Get the Launch Kit
             </Button>
           )}
         </div>
       </header>
+
+      {paymentMessage !== "idle" && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-300/25 bg-indigo-400/10 px-4 py-3 text-sm text-indigo-100">
+          <span>{{
+            pending: "Confirming payment with the provider. This usually takes a few seconds.",
+            waiting: "Payment confirmation is still pending. Check again before starting another checkout.",
+            confirmed: "Payment confirmed. Your purchase is available here.",
+            cancelled: "Checkout was cancelled.",
+          }[paymentMessage]}</span>
+          {paymentMessage === "waiting" && (
+            <Button size="sm" variant="outline" onClick={() => window.location.reload()}>Check again</Button>
+          )}
+        </div>
+      )}
 
       {/* Analysis Progress Banner if in progress */}
       {analyzing && (
@@ -408,7 +412,6 @@ export default function ProductReportPage() {
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredMatches.map((match, index) => {
-              const isLocked = !isUnlocked && index >= 5;
               const tierBadge =
                 match.tier === 1
                   ? "tier1"
@@ -421,11 +424,7 @@ export default function ProductReportPage() {
               return (
                 <div
                   key={match.platform_slug}
-                  className={`p-5 rounded-2xl border transition-all relative overflow-hidden flex flex-col justify-between ${
-                    isLocked
-                      ? "border-border/40 bg-card/20 select-none filter blur-[3px]"
-                      : "border-border/80 bg-card/50 hover:border-indigo-500/40"
-                  }`}
+                  className="flex flex-col justify-between rounded-2xl border border-border/80 bg-card/50 p-5 transition-colors hover:border-indigo-500/40"
                 >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between gap-3">
@@ -474,16 +473,16 @@ export default function ProductReportPage() {
           </div>
 
           {/* Paywall Banner for Matches */}
-          {!isUnlocked && matches.length > 5 && (
+          {!isUnlocked && analysis && (
             <div className="p-8 rounded-2xl border border-indigo-500/30 bg-gradient-to-b from-card/80 to-indigo-950/30 backdrop-blur-xl text-center space-y-4 shadow-2xl">
               <div className="w-12 h-12 rounded-full bg-indigo-500/10 text-indigo-400 flex items-center justify-center mx-auto">
                 <Lock className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold text-white">
-                Unlock 15+ more high-fit launch platforms
+                See the full ranked shortlist
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto">
-                Free preview displays your top 5 matches. Upgrade to the Launch Kit to reveal all 35 scored platforms, domain ratings, and full tailored copy blocks.
+                Your preview includes up to five matches. The Launch Kit includes the full ranked shortlist and tailored drafts.
               </p>
               <div className="pt-2 flex justify-center gap-3">
                 <Button
@@ -505,20 +504,14 @@ export default function ProductReportPage() {
       {activeTab === "copy" && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-6">
-            {matches.map((match, idx) => {
+            {matches.map((match) => {
               const copy = copies[match.platform_slug];
-              const isLocked = !isUnlocked && idx >= 2;
-
-              if (!copy && !isLocked) return null;
+              if (!copy) return null;
 
               return (
                 <div
                   key={match.platform_slug}
-                  className={`p-6 rounded-2xl border transition-all relative ${
-                    isLocked
-                      ? "border-border/40 bg-card/20 select-none filter blur-[4px]"
-                      : "border-border/80 bg-card/50"
-                  }`}
+                  className="rounded-2xl border border-border/80 bg-card/50 p-6"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-border/60 gap-3">
                     <div className="flex items-center gap-3">
@@ -538,7 +531,7 @@ export default function ProductReportPage() {
                       </div>
                     </div>
 
-                    {!isLocked && (
+                    {copy && (
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
@@ -579,7 +572,7 @@ export default function ProductReportPage() {
                     )}
                   </div>
 
-                  {!isLocked && copy && (
+                  {copy && (
                     <div className="space-y-4 pt-4">
                       {/* Title / Tagline */}
                       <div className="space-y-1">
@@ -648,7 +641,7 @@ export default function ProductReportPage() {
                 <Lock className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold text-white">
-                Unlock All 35 Platform Copy Blocks
+                Get all drafts for your ranked shortlist
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto">
                 Free plan includes 2 copy samples. Upgrade to Launch Kit to unlock full tailored copy for Product Hunt, Hacker News, Reddit, BetaList, DevHunt, and 45+ other directories.

@@ -33,7 +33,7 @@ export const PLAN_CONFIGS: Record<UserPlan, PlanPricing> = {
     inrAmount: 1999,
     isSubscription: false,
     features: [
-      "All 35 platform match scores & reasons",
+      "Up to 20 ranked platform matches with fit scores and reasons",
       "All tailored copy blocks (HN, PH, Reddit, directories)",
       "Big Launch Kit (PH taglines, gallery text, checklists)",
       "Show HN title + technical post draft",
@@ -52,9 +52,9 @@ export const PLAN_CONFIGS: Record<UserPlan, PlanPricing> = {
       "Everything in Launch Kit",
       "Manual submissions to eligible platforms",
       "Proof screenshots & direct live URLs logged in tracker",
-      "High-authority directory submissions (DR 50 to 90+)",
+      "Submission scope based on directory eligibility and requirements",
       "Priority launch report & executive review",
-      "Dedicated submission specialist assigned",
+      "Submission status and proof tracked in your workspace",
     ],
   },
   growth: {
@@ -106,9 +106,6 @@ export interface WebhookResult {
   verified: boolean;
   orderId?: string;
   providerRef?: string;
-  userId?: string;
-  productId?: string;
-  plan?: UserPlan;
   amount?: number;
   currency?: PaymentCurrency;
   status: "completed" | "failed" | "ignored";

@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataService } from "@/lib/services/data";
 import { EmailService } from "@/lib/email/resend";
-import { SubmissionStatus, ProductPlatform } from "@/types";
+import { ProductPlatform } from "@/types";
+import { summarizeProduct, trackerItem } from "@/lib/services/report-access";
+import { z } from "zod";
+
+const webUrl = z.url({ protocol: /^https?$/i }).nullable().optional();
+const trackerInput = z.object({
+  platformId: z.string().nonempty(),
+  status: z.enum(["not started", "submitted", "pending review", "live", "rejected"]).optional(),
+  live_url: webUrl,
+  proof_url: webUrl,
+});
 
 export async function GET(
   req: NextRequest,
@@ -15,7 +25,10 @@ export async function GET(
     }
 
     const trackerItems = await DataService.getProductPlatforms(productId);
-    return NextResponse.json({ success: true, items: trackerItems, product });
+    const items = trackerItems.map(trackerItem).sort((first, second) =>
+      (first.platform?.name ?? first.platform_id).localeCompare(second.platform?.name ?? second.platform_id)
+    );
+    return NextResponse.json({ success: true, items, product: summarizeProduct(product) });
   } catch (error) {
     console.error("GET /api/tracker/[productId] error:", error);
     return NextResponse.json({ error: "Failed to fetch tracker items" }, { status: 500 });
@@ -28,15 +41,23 @@ export async function PATCH(
 ) {
   try {
     const { productId } = params;
-    const { platformId, status, live_url, proof_url } = await req.json();
-
-    if (!platformId) {
-      return NextResponse.json({ error: "platformId is required" }, { status: 400 });
+    const viewer = await DataService.getCurrentUser();
+    if (!viewer) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
+    const product = await DataService.getProduct(productId);
+    if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    const parsed = trackerInput.safeParse(await req.json());
+    if (!parsed.success) return NextResponse.json({ error: "Invalid tracker update" }, { status: 400 });
+    const { platformId, status, live_url, proof_url } = parsed.data;
+    if (proof_url !== undefined && viewer.role !== "admin") {
+      return NextResponse.json({ error: "Only submission staff can record proof" }, { status: 403 });
+    }
+    if (status === undefined && live_url === undefined && proof_url === undefined) {
+      return NextResponse.json({ error: "No tracker changes supplied" }, { status: 400 });
     }
 
     const updates: Partial<ProductPlatform> = {};
     if (status) {
-      updates.status = status as SubmissionStatus;
+      updates.status = status;
       if (status === "submitted" || status === "live") {
         updates.submitted_at = new Date().toISOString();
       }
@@ -54,9 +75,8 @@ export async function PATCH(
       try {
         const allItems = await DataService.getProductPlatforms(productId);
         const liveCount = allItems.filter((i) => i.status === "live").length;
-        const product = await DataService.getProduct(productId);
-        if (product && liveCount >= 10 && product.status !== "launched") {
-          const launched = await DataService.updateProduct(productId, { status: "launched" });
+        if (liveCount >= 10 && product.status !== "launched") {
+          const launched = await DataService.updateProduct(productId, { status: "launched" }, product.status);
           if (launched) {
             await EmailService.sendLaunchCompleteEmail(
               product.founder_email,
@@ -71,7 +91,7 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ success: true, item: updated });
+    return NextResponse.json({ success: true, item: trackerItem(updated) });
   } catch (error) {
     console.error("PATCH /api/tracker/[productId] error:", error);
     return NextResponse.json({ error: "Failed to update tracker item" }, { status: 500 });

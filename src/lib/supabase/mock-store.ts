@@ -382,8 +382,9 @@ class MockStore {
 
     // If order is completed, update product status and user plan
     if (order.status === "completed") {
-      if (order.product_id) {
-        this.updateProduct(order.product_id, { status: "paid" });
+      const product = order.product_id ? this.getProduct(order.product_id) : null;
+      if (product?.status === "draft" || product?.status === "analyzed") {
+        this.updateProduct(product.id, { status: "paid" });
       }
       const user = this.profiles.get(order.user_id);
       if (user) {
@@ -398,8 +399,9 @@ class MockStore {
     if (!order) return null;
     order.status = status;
     if (status === "completed") {
-      if (order.product_id) {
-        this.updateProduct(order.product_id, { status: "paid" });
+      const product = order.product_id ? this.getProduct(order.product_id) : null;
+      if (product?.status === "draft" || product?.status === "analyzed") {
+        this.updateProduct(product.id, { status: "paid" });
       }
       const user = this.profiles.get(order.user_id);
       if (user) {
