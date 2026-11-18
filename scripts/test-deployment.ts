@@ -193,7 +193,9 @@ async function main() {
     const data = await res.json();
     assert(data.success === true, "Regenerate copy success was false");
     assert(Boolean(data.copy.title_or_tagline), "Regenerated title missing");
-    assert(data.copy.title_or_tagline.includes("Show HN:"), "HN title must format as Show HN");
+    if (previewSlug === "hackernews") {
+      assert(data.copy.title_or_tagline.startsWith("Show HN:"), "HN title must format as Show HN");
+    }
   });
 
   // 4. LAUNCH TRACKER & UTM LINK VERIFICATION
@@ -213,7 +215,7 @@ async function main() {
     }
   });
 
-  await runTest("PATCH /api/tracker/[productId] updates submission status and live URL", async () => {
+  await runTest("PATCH /api/tracker/[productId] rejects tracker changes before payment", async () => {
     const res = await fetch(`${BASE_URL}/api/tracker/${createdProductId}`);
     const data = await res.json();
     const firstItem = data.items[0];
@@ -229,11 +231,7 @@ async function main() {
       }),
     });
 
-    assert(patchRes.status === 200, `Expected 200, got ${patchRes.status}`);
-    const patchData = await patchRes.json();
-    assert(patchData.success === true, "Update tracker was not successful");
-    assert(patchData.item.status === "live", `Expected status 'live', got ${patchData.item.status}`);
-    assert(patchData.item.live_url === "https://www.producthunt.com/posts/bugtrackerpro", "Live URL did not update");
+    assert(patchRes.status === 403, `Expected 403 before payment, got ${patchRes.status}`);
   });
 
   // 5. PAYMENTS PROVIDER ABSTRACTION (USD & INR)
@@ -281,6 +279,29 @@ async function main() {
     assert(data.paidPlan === "done_for_you", "Expected a completed Done-For-You order");
     assert(data.product.ai_analysis.top_matches.length > 5, "Full shortlist missing");
     assert(Boolean(data.product.ai_analysis.big_launch_kit?.show_hn?.title), "Paid launch kit missing");
+  });
+
+  await runTest("PATCH /api/tracker/[productId] updates submission status and live URL", async () => {
+    const res = await fetch(`${BASE_URL}/api/tracker/${createdProductId}`);
+    const data = await res.json();
+    const firstItem = data.items[0];
+
+    const patchRes = await fetch(`${BASE_URL}/api/tracker/${createdProductId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        platformId: firstItem.platform_id,
+        status: "live",
+        live_url: "https://www.producthunt.com/posts/bugtrackerpro",
+        proof_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800",
+      }),
+    });
+
+    assert(patchRes.status === 200, `Expected 200, got ${patchRes.status}`);
+    const patchData = await patchRes.json();
+    assert(patchData.success === true, "Update tracker was not successful");
+    assert(patchData.item.status === "live", `Expected status 'live', got ${patchData.item.status}`);
+    assert(patchData.item.live_url === "https://www.producthunt.com/posts/bugtrackerpro", "Live URL did not update");
   });
 
   // 6. ADMIN CONSOLE & PLATFORM DATABASE CRUD
