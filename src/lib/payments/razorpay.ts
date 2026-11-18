@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/lib/supabase/demo";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import { CreateCheckoutParams, CheckoutResult, WebhookResult, PLAN_CONFIGS } from "./types";
@@ -51,7 +52,9 @@ export class RazorpayProvider {
       };
     }
 
-    // Fallback sandbox / dev session
+    if (!isDemoMode()) throw new Error("Payment provider is unavailable");
+
+    // Local demo checkout
     const mockOrderId = `order_rp_${Date.now()}`;
     return {
       provider: "razorpay",
@@ -76,6 +79,9 @@ export class RazorpayProvider {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
     if (!secret || secret.includes("your-key")) {
+      if (!isDemoMode()) {
+        return { verified: false, status: "failed", error: "Webhook verification unavailable" };
+      }
       try {
         const payload = JSON.parse(rawBody);
         return {

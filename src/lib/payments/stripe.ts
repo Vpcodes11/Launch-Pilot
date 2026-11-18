@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/lib/supabase/demo";
 import Stripe from "stripe";
 import { CreateCheckoutParams, CheckoutResult, WebhookResult, PLAN_CONFIGS } from "./types";
 import { UserPlan } from "@/types";
@@ -51,7 +52,9 @@ export class StripeProvider {
       };
     }
 
-    // Fallback sandbox / dev session
+    if (!isDemoMode()) throw new Error("Payment provider is unavailable");
+
+    // Local demo checkout
     const mockSessionId = `cs_test_${Date.now()}`;
     return {
       provider: "stripe",
@@ -66,6 +69,9 @@ export class StripeProvider {
 
     if (!stripe || !webhookSecret || webhookSecret.includes("your-key")) {
       // In dev sandbox mode without secret, check if valid payload
+      if (!isDemoMode()) {
+        return { verified: false, status: "failed", error: "Webhook verification unavailable" };
+      }
       try {
         const payload = JSON.parse(rawBody);
         return {

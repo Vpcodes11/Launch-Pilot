@@ -7,15 +7,21 @@ export async function POST(req: NextRequest) {
   try {
     const { plan, productId, currency = "USD" } = await req.json();
 
-    if (!plan || !PLAN_CONFIGS[plan as UserPlan]) {
+    if (!["launch_kit", "done_for_you", "growth"].includes(plan) || !["USD", "INR"].includes(currency)) {
       return NextResponse.json({ error: "Invalid plan specified" }, { status: 400 });
     }
 
     const user = await DataService.getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
 
-    const host = req.headers.get("host") || "localhost:3000";
-    const protocol = host.includes("localhost") ? "http" : "https";
-    const baseUrl = `${protocol}://${host}`;
+    if (productId != null) {
+      const product = typeof productId === "string" ? await DataService.getProduct(productId) : null;
+      if (!product || product.user_id !== user.id) {
+        return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      }
+    }
+
+    const baseUrl = new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").origin;
 
     const successUrl = productId
       ? `${baseUrl}/product/${productId}?payment=success`

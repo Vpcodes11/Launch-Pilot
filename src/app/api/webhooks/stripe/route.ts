@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         const productName = product ? product.name : "Your Product";
         const user = await DataService.getCurrentUser();
 
-        await EmailService.sendPaymentReceiptEmail(
+        if (user) await EmailService.sendPaymentReceiptEmail(
           user.email,
           user.name || "Founder",
           productName,

@@ -5,6 +5,7 @@ import { EmailService } from "@/lib/email/resend";
 export async function GET() {
   try {
     const user = await DataService.getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     const products = await DataService.getProducts(user.id);
     return NextResponse.json({ products });
   } catch (error) {
@@ -17,6 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const user = await DataService.getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
 
     // Basic validation
     if (!body.name || !body.url || !body.tagline || !body.short_description) {

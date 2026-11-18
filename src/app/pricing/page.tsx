@@ -168,7 +168,7 @@ export default function PricingPage() {
             </div>
             <ul className="space-y-3 text-xs text-foreground/90 mt-6">
               <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-indigo-400" /> All 50+ platform matches
+                <Check className="w-3.5 h-3.5 text-indigo-400" /> All 35 platform matches
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-indigo-400" /> All tailored copy blocks
@@ -207,7 +207,7 @@ export default function PricingPage() {
           </div>
           <div>
             <h3 className="text-lg font-bold text-white">Done-For-You</h3>
-            <p className="text-xs text-muted-foreground mt-1">Our team submits to 50+ sites</p>
+            <p className="text-xs text-muted-foreground mt-1">Our team submits to eligible sites</p>
             <div className="text-3xl font-extrabold text-white mt-4">
               {currency === "INR" ? "₹6,999" : "$99"}
               <span className="text-xs font-normal text-muted-foreground ml-1">one-time</span>
@@ -217,7 +217,7 @@ export default function PricingPage() {
                 <Check className="w-3.5 h-3.5 text-purple-400" /> Everything in Launch Kit
               </li>
               <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-purple-400" /> 50+ platforms submitted
+                <Check className="w-3.5 h-3.5 text-purple-400" /> Submissions to eligible platforms
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-purple-400" /> 7-day turnaround guarantee
@@ -304,16 +304,16 @@ export default function PricingPage() {
               <tr>
                 <td className="p-4 font-medium text-white">Platform Fit Scoring</td>
                 <td className="p-4 text-center text-muted-foreground">Top 5</td>
-                <td className="p-4 text-center text-emerald-400">All 50+</td>
-                <td className="p-4 text-center text-emerald-400">All 50+</td>
-                <td className="p-4 text-center text-emerald-400">All 50+ + New</td>
+                <td className="p-4 text-center text-emerald-400">All 35</td>
+                <td className="p-4 text-center text-emerald-400">All 35</td>
+                <td className="p-4 text-center text-emerald-400">All 35 + New</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Tailored Copy Blocks</td>
                 <td className="p-4 text-center text-muted-foreground">2 Samples</td>
-                <td className="p-4 text-center text-emerald-400">All 50+</td>
-                <td className="p-4 text-center text-emerald-400">All 50+</td>
-                <td className="p-4 text-center text-emerald-400">All 50+</td>
+                <td className="p-4 text-center text-emerald-400">All 35</td>
+                <td className="p-4 text-center text-emerald-400">All 35</td>
+                <td className="p-4 text-center text-emerald-400">All 35</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Big Launch Kit (PH, HN, Reddit)</td>
@@ -326,8 +326,8 @@ export default function PricingPage() {
                 <td className="p-4 font-medium text-white">Manual Submissions by Our Team</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
                 <td className="p-4 text-center text-muted-foreground">—</td>
-                <td className="p-4 text-center font-bold text-purple-400">50+ Directories</td>
-                <td className="p-4 text-center font-bold text-purple-400">50+ &amp; Monthly</td>
+                <td className="p-4 text-center font-bold text-purple-400">Eligible directories</td>
+                <td className="p-4 text-center font-bold text-purple-400">Eligible directories &amp; monthly</td>
               </tr>
               <tr>
                 <td className="p-4 font-medium text-white">Proof Screenshots &amp; Live URLs</td>

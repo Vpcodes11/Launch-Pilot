@@ -1,18 +1,18 @@
 # 🚀 LaunchPilot — Indie Developer Distribution & Launch Engine
 
 > **"You shipped it. Now get it seen."**  
-> Tailored launches on 50+ platforms, plus Product Hunt, Hacker News, and Reddit launch preparation. Built specifically for indie hackers, bootstrappers, and micro-SaaS builders.
+> Tailored launches on 35 platforms, plus Product Hunt, Hacker News, and Reddit launch preparation. Built specifically for indie hackers, bootstrappers, and micro-SaaS builders.
 
 ---
 
 ## ⚡ Overview
 
-LaunchPilot solves the most agonizing bottleneck for software developers: **distribution**. A founder submits their product once. The app analyzes which launch platforms fit the product best, writes bespoke copy tailored to each community's tone and character limits, provides an execution-ready launch kit with hour-by-hour checklists, and tracks live listings with custom UTM parameters. On paid plans, our human team conducts manual submissions to 50+ directories with screenshot proofs.
+LaunchPilot solves the most agonizing bottleneck for software developers: **distribution**. A founder submits their product once. The app analyzes which launch platforms fit the product best, writes bespoke copy tailored to each community's tone and character limits, provides an execution-ready launch kit with hour-by-hour checklists, and tracks live listings with custom UTM parameters. On paid plans, our human team conducts manual submissions to eligible directories with screenshot proofs.
 
 ### 🌟 Key Features
 - **One-Time Multi-Step Submission (`/submit`)**: 4-step wizard with real-time character limit enforcement (tagline $\le 60$, short description $\le 260$), draft auto-save to local storage, asset management, and authentication gate.
 - **AI-Powered Platform Match & Tailored Copy (`/product/[id]`)**:
-  - Scores 50+ platforms ($0-100$) across 4 tiers (Tier 1 Big Launches, Tier 2 Launch Directories, Tier 3 High-DR SEO/Backlinks, Tier 4 Niche AI/Dev/Content).
+  - Scores 35 platforms ($0-100$) across 4 tiers (Tier 1 Big Launches, Tier 2 Launch Directories, Tier 3 High-DR SEO/Backlinks, Tier 4 Niche AI/Dev/Content).
   - Generates tone-matched listings (Hacker News: technical & plain; Product Hunt: punchy tagline + maker first comment; Reddit: story-driven & value-first).
   - Single-platform **Copy** and **Regenerate** buttons with instant feedback.
   - Guardrail: strictly never invents fake metrics or fake testimonials.
@@ -211,3 +211,8 @@ The database is pre-seeded with 35 high-impact platforms categorized into 4 tier
    - Stripe: `https://your-domain.vercel.app/api/webhooks/stripe`
    - Razorpay: `https://your-domain.vercel.app/api/webhooks/razorpay`
 5. Deploy!
+
+
+### Local demo and production access
+
+Set NEXT_PUBLIC_LAUNCHPILOT_DEMO=true with npm run dev and placeholder service credentials for the local demo. Apply both Supabase migrations to staging. Production submission, checkout, and admin requests require a Supabase session. Admin APIs verify the profile role on the server.

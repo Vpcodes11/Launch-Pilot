@@ -109,7 +109,7 @@ export default function ProductReportPage() {
     if (searchParams.get("payment") === "success") {
       setIsUnlocked(true);
       localStorage.setItem(`unlocked_${productId}`, "true");
-      toast.success("Payment successful! Full Launch Kit and all 50+ platforms unlocked.");
+      toast.success("Payment successful! Full Launch Kit and all 35 platforms unlocked.");
     }
   }, [searchParams, productId]);
 
@@ -271,7 +271,7 @@ export default function ProductReportPage() {
               className="gap-1.5 text-xs shadow-md shadow-indigo-500/20"
             >
               <Sparkles className="w-4 h-4" />
-              Unlock All 50+ Platforms ($29)
+              Unlock All 35 Platforms ($29)
             </Button>
           )}
         </div>
@@ -283,7 +283,7 @@ export default function ProductReportPage() {
           <div className="flex items-center justify-between text-xs text-indigo-300 font-medium">
             <span className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-indigo-400 animate-spin" />
-              Evaluating product against 50+ launch platforms &amp; generating tailored copy...
+              Evaluating product against 35 launch platforms &amp; generating tailored copy...
             </span>
             <span className="font-mono">{analysisProgress}%</span>
           </div>
@@ -457,7 +457,7 @@ export default function ProductReportPage() {
                 Unlock 15+ more high-fit launch platforms
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto">
-                Free preview displays your top 5 matches. Upgrade to the Launch Kit to reveal all 50+ scored platforms, domain ratings, and full tailored copy blocks.
+                Free preview displays your top 5 matches. Upgrade to the Launch Kit to reveal all 35 scored platforms, domain ratings, and full tailored copy blocks.
               </p>
               <div className="pt-2 flex justify-center gap-3">
                 <Button
@@ -622,7 +622,7 @@ export default function ProductReportPage() {
                 <Lock className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold text-white">
-                Unlock All 50+ Platform Copy Blocks
+                Unlock All 35 Platform Copy Blocks
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground max-w-lg mx-auto">
                 Free plan includes 2 copy samples. Upgrade to Launch Kit to unlock full tailored copy for Product Hunt, Hacker News, Reddit, BetaList, DevHunt, and 45+ other directories.

@@ -19,7 +19,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "LaunchPilot — Launch & Distribution Engine for Indie Developers",
   description:
-    "You shipped it. Now get it seen. Tailored launches on 50+ platforms, plus Product Hunt, HN, and Reddit launch prep. Built for indie devs.",
+    "You shipped it. Now get it seen. Tailored launches on 35 platforms, plus Product Hunt, HN, and Reddit launch prep. Built for indie devs.",
   keywords: [
     "indie hacker launch",
     "Product Hunt launch kit",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "LaunchPilot — Launch & Distribution Engine for Indie Developers",
     description:
-      "You shipped it. Now get it seen. Tailored launches on 50+ platforms, plus Product Hunt, HN, and Reddit launch prep.",
+      "You shipped it. Now get it seen. Tailored launches on 35 platforms, plus Product Hunt, HN, and Reddit launch prep.",
     url: "https://launchpilot.dev",
     siteName: "LaunchPilot",
     type: "website",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "LaunchPilot — Launch & Distribution Engine for Indie Developers",
     description:
-      "You shipped it. Now get it seen. Tailored launches on 50+ platforms, plus Product Hunt, HN, and Reddit launch prep.",
+      "You shipped it. Now get it seen. Tailored launches on 35 platforms, plus Product Hunt, HN, and Reddit launch prep.",
     creator: "@launchpilot",
     images: ["https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&h=630&fit=crop"],
   },

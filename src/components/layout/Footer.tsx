@@ -40,7 +40,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/#platforms" className="hover:text-white transition-colors">
-                  Platforms Directory (50+)
+                  Platforms Directory (35)
                 </Link>
               </li>
             </ul>

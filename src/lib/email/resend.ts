@@ -31,7 +31,7 @@ export class EmailService {
         </div>
         <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
           <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Welcome aboard, ${name}! 👋</h2>
-          <p style="color: #d1d5db; line-height: 1.6;">You shipped your product — now let's make sure the world actually sees it. LaunchPilot analyzes your product across 50+ directories and communities, generates tone-matched copy, and gives you an execution-ready launch plan.</p>
+          <p style="color: #d1d5db; line-height: 1.6;">You shipped your product — now let's make sure the world actually sees it. LaunchPilot analyzes your product across 35 directories and communities, generates tone-matched copy, and gives you an execution-ready launch plan.</p>
           <div style="margin: 24px 0; text-align: center;">
             <a href="${appUrl}/dashboard" style="background-color: #4f46e5; color: #ffffff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">Go to Your Dashboard</a>
           </div>
@@ -69,7 +69,7 @@ export class EmailService {
         </div>
         <div style="background-color: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
           <h2 style="color: #ffffff; font-size: 20px; margin-top: 0;">Analysis Complete for ${productName}! 🚀</h2>
-          <p style="color: #d1d5db; line-height: 1.6;">Hi ${name}, our AI has evaluated ${productName} across 50+ launch platforms and directories. We've scored audience fit, identified the top high-intent channels, and drafted custom launch copy for each.</p>
+          <p style="color: #d1d5db; line-height: 1.6;">Hi ${name}, our AI has evaluated ${productName} across 35 launch platforms and directories. We've scored audience fit, identified the top high-intent channels, and drafted custom launch copy for each.</p>
           <div style="background-color: #1e1b4b; border: 1px solid #3730a3; border-radius: 6px; padding: 16px; margin: 20px 0;">
             <p style="margin: 0; color: #c7d2fe; font-size: 14px; font-weight: 500;">✨ Highlights in your report:</p>
             <ul style="color: #e0e7ff; font-size: 13px; margin: 8px 0 0 0; padding-left: 20px; line-height: 1.6;">
@@ -140,7 +140,7 @@ export class EmailService {
           ${
             plan === "done_for_you"
               ? `<div style="background-color: #064e3b; border: 1px solid #059669; border-radius: 6px; padding: 14px; margin-top: 20px;">
-                  <p style="margin: 0; color: #a7f3d0; font-size: 13px;">Our submission specialists will review your assets and begin manual submissions to 50+ platforms within 24 hours. You can follow live progress in your tracker!</p>
+                  <p style="margin: 0; color: #a7f3d0; font-size: 13px;">Our submission specialists will review your assets and begin manual submissions to eligible platforms within 24 hours. You can follow live progress in your tracker!</p>
                 </div>`
               : ""
           }

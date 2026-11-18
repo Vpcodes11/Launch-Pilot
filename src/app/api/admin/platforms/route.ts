@@ -1,8 +1,12 @@
+import { requireAdmin } from "@/lib/supabase/require-admin";
 import { NextRequest, NextResponse } from "next/server";
 import { DataService } from "@/lib/services/data";
 
 export async function GET() {
   try {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const platforms = await DataService.getPlatforms();
     return NextResponse.json({ success: true, platforms });
   } catch (err) {
@@ -13,6 +17,9 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const body = await req.json();
     if (!body.name || !body.slug || !body.url || !body.submit_url || !body.tier) {
       return NextResponse.json({ error: "Missing required platform fields" }, { status: 400 });
@@ -45,6 +52,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { id, ...updates } = await req.json();
     if (!id) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
@@ -60,6 +70,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
     if (!id) {

@@ -235,7 +235,7 @@ export default function SubmitPage() {
             </Badge>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Fill in once. Get matched with 50+ launch platforms and tailored copy.
+            Fill in once. Get matched with 35 launch platforms and tailored copy.
           </p>
         </div>
 

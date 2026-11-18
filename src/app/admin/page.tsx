@@ -28,11 +28,11 @@ export default function AdminPage() {
 
   // Stats & Data
   const [stats, setStats] = useState({
-    totalSignups: 85,
-    paidOrdersCount: 24,
-    totalRevenueUSD: 2376,
-    totalRevenueINR: 48993,
-    dfyQueueCount: 1,
+    totalSignups: 0,
+    paidOrdersCount: 0,
+    totalRevenueUSD: 0,
+    totalRevenueINR: 0,
+    dfyQueueCount: 0,
   });
   const [dfyProducts, setDfyProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -66,25 +66,12 @@ export default function AdminPage() {
     active: true,
   });
 
-  // Check admin role
-  useEffect(() => {
-    const role = localStorage.getItem("launchpilot_role");
-    if (role === "admin") {
-      setIsAdmin(true);
-    }
-  }, []);
-
-  const handleEnableAdmin = () => {
-    localStorage.setItem("launchpilot_role", "admin");
-    setIsAdmin(true);
-    window.dispatchEvent(new Event("role-change"));
-    toast.success("Switched to Admin Role!");
-  };
-
   // Load Admin Data
   const loadAdminData = async () => {
     try {
       const res = await fetch("/api/admin/stats");
+      setIsAdmin(res.ok);
+      if (!res.ok) return;
       const data = await res.json();
       if (data.stats) {
         setStats(data.stats);
@@ -222,12 +209,6 @@ export default function AdminPage() {
           <p className="text-sm text-muted-foreground">
             This panel is reserved for LaunchPilot administrators and submission specialists to manage Done-For-You orders and the platforms database.
           </p>
-        </div>
-        <div className="pt-2">
-          <Button onClick={handleEnableAdmin} variant="brand" className="gap-2">
-            <Shield className="w-4 h-4" />
-            Switch to Admin Demo Mode
-          </Button>
         </div>
       </div>
     );
@@ -394,7 +375,7 @@ export default function AdminPage() {
                           </>
                         ) : (
                           <>
-                            <ChevronDown className="w-3.5 h-3.5" /> Manage 50+ Submissions
+                            <ChevronDown className="w-3.5 h-3.5" /> Manage submissions
                           </>
                         )}
                       </Button>

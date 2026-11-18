@@ -110,7 +110,7 @@ export default function DashboardPage() {
             <span>Platforms Analyzed</span>
             <Sparkles className="w-4 h-4 text-purple-400" />
           </div>
-          <div className="text-2xl font-bold text-purple-400">50+</div>
+          <div className="text-2xl font-bold text-purple-400">35</div>
           <div className="text-[11px] text-muted-foreground mt-1">Per active product</div>
         </div>
 

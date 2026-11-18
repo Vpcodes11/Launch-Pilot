@@ -1,5 +1,6 @@
 "use client";
 
+import { isDemoMode } from "@/lib/supabase/demo";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
@@ -15,6 +16,7 @@ export function Navbar() {
 
   // Read mock role from localStorage if in client
   useEffect(() => {
+    if (!isDemoMode()) return;
     const savedRole = localStorage.getItem("launchpilot_role") as "user" | "admin";
     if (savedRole === "admin") {
       setUserRole("admin");
@@ -32,7 +34,7 @@ export function Navbar() {
 
   const navLinks = [
     { label: "How It Works", href: "/#how-it-works" },
-    { label: "Platforms (50+)", href: "/#platforms" },
+    { label: "Platforms (35)", href: "/#platforms" },
     { label: "Pricing", href: "/pricing" },
     { label: "Dashboard", href: "/dashboard" },
     ...(isAdmin ? [{ label: "Admin Panel", href: "/admin", isSpecial: true }] : []),
@@ -75,7 +77,7 @@ export function Navbar() {
         {/* Right CTA & Role Switcher */}
         <div className="hidden md:flex items-center gap-3">
           {/* Quick Role Switcher for instant demo/testing */}
-          <button
+          {isDemoMode() && <button
             onClick={toggleRole}
             title="Click to toggle between Founder and Admin view"
             className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full border border-border/80 bg-secondary/50 text-muted-foreground hover:text-foreground transition-all hover:border-indigo-500/50"
@@ -94,7 +96,7 @@ export function Navbar() {
             <span className="text-[10px] bg-background/80 px-1 py-0.2 rounded border border-border text-muted-foreground">
               switch
             </span>
-          </button>
+          </button>}
 
           <Button asChild variant="brand" size="sm" className="gap-1.5 font-medium">
             <Link href="/submit">
@@ -135,7 +137,7 @@ export function Navbar() {
             ))}
           </div>
 
-          <div className="pt-3 border-t border-border/60 flex items-center justify-between">
+          {isDemoMode() && <div className="pt-3 border-t border-border/60 flex items-center justify-between">
             <span className="text-xs text-muted-foreground">Demo Role View</span>
             <button
               onClick={toggleRole}
@@ -143,7 +145,7 @@ export function Navbar() {
             >
               {userRole === "admin" ? "Admin Mode" : "Founder Mode"} (toggle)
             </button>
-          </div>
+          </div>}
         </div>
       )}
     </header>

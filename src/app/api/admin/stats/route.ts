@@ -1,13 +1,24 @@
+import { requireAdmin } from "@/lib/supabase/require-admin";
 import { NextResponse } from "next/server";
 import { DataService } from "@/lib/services/data";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { mockStore } from "@/lib/supabase/mock-store";
 
 export async function GET() {
   try {
+    const denied = await requireAdmin();
+    if (denied) return denied;
+
     const orders = await DataService.getOrders();
     const products = await DataService.getProducts();
     const platforms = await DataService.getPlatforms();
-    const profiles = mockStore.getProfiles();
+    const admin = createAdminClient();
+    let totalSignups = mockStore.getProfiles().length;
+    if (admin) {
+      const { count, error } = await admin.from("profiles").select("id", { count: "exact", head: true });
+      if (error) throw error;
+      totalSignups = count ?? 0;
+    }
 
     // Calculate revenue
     const totalRevenueUSD = orders
@@ -26,10 +37,10 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       stats: {
-        totalSignups: profiles.length + 85,
-        paidOrdersCount: orders.filter((o) => o.status === "completed").length + 24,
-        totalRevenueUSD: totalRevenueUSD + 2376,
-        totalRevenueINR: totalRevenueINR + 48993,
+        totalSignups,
+        paidOrdersCount: orders.filter((o) => o.status === "completed").length,
+        totalRevenueUSD,
+        totalRevenueINR,
         dfyQueueCount: paidProducts.length,
       },
       dfyQueue: paidProducts,

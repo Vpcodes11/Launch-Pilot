@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/lib/supabase/demo";
 import { mockStore } from "@/lib/supabase/mock-store";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -5,7 +6,7 @@ import { Platform, Product, ProductPlatform, Profile, Order, ProductFormData } f
 
 export class DataService {
   // Profiles & Auth
-  static async getCurrentUser(): Promise<Profile> {
+  static async getCurrentUser(): Promise<Profile | null> {
     try {
       const supabase = createServerSupabase();
       if (supabase) {
@@ -23,6 +24,7 @@ export class DataService {
     } catch {
       // Fallback to mock store
     }
+    if (!isDemoMode()) return null;
     return mockStore.getCurrentUser();
   }
 
@@ -37,13 +39,14 @@ export class DataService {
           .order("tier", { ascending: true })
           .order("domain_rating", { ascending: false });
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           return data as Platform[];
         }
       }
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.getPlatforms();
   }
 
@@ -62,6 +65,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.addPlatform(platform);
   }
 
@@ -75,6 +79,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) return null;
     return mockStore.updatePlatform(id, updates);
   }
 
@@ -88,6 +93,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.deletePlatform(id);
   }
 
@@ -106,6 +112,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.getProducts(userId);
   }
 
@@ -119,6 +126,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) return null;
     return mockStore.getProduct(id);
   }
 
@@ -139,6 +147,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.createProduct(newProductData);
   }
 
@@ -152,6 +161,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) return null;
     return mockStore.updateProduct(id, updates);
   }
 
@@ -165,13 +175,14 @@ export class DataService {
           .select("*, platform:platforms(*)")
           .eq("product_id", productId);
 
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
           return data as ProductPlatform[];
         }
       }
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.getProductPlatforms(productId);
   }
 
@@ -185,6 +196,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     mockStore.setProductPlatforms(productId, items);
   }
 
@@ -209,6 +221,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) return null;
     return mockStore.updateProductPlatformStatus(productId, platformId, updates);
   }
 
@@ -223,6 +236,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.getOrders();
   }
 
@@ -236,6 +250,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
     return mockStore.createOrder(order);
   }
 
@@ -255,6 +270,7 @@ export class DataService {
     } catch {
       // Fallback
     }
+    if (!isDemoMode()) return null;
     return mockStore.updateOrderStatus(orderRef, status);
   }
 }

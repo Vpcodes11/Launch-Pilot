@@ -35,7 +35,7 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "How does the AI analysis actually work?",
-      a: "We evaluate your product's category, pricing model, tech stack, and target audience against our database of 50+ launch platforms. The AI scores each platform's fit from 0 to 100, writes one-line strategic reasoning, and generates listings that strictly observe that platform's character limits and community tone rules.",
+      a: "We evaluate your product's category, pricing model, tech stack, and target audience against our database of 35 launch platforms. The AI scores each platform's fit from 0 to 100, writes one-line strategic reasoning, and generates listings that strictly observe that platform's character limits and community tone rules.",
     },
     {
       q: "Will I get banned on Reddit or Hacker News for posting AI copy?",
@@ -43,7 +43,7 @@ export default function LandingPage() {
     },
     {
       q: "What is included in the Done-For-You ($99 / ₹6,999) plan?",
-      a: "Everything in the Launch Kit, plus our experienced team manually submits your product to 50+ high-authority directories within 7 business days. We log direct live listing URLs and upload proof screenshots to your Launch Tracker so you can verify every submission.",
+      a: "Everything in the Launch Kit, plus our experienced team manually submits your product to eligible directories within 7 business days. We log direct live listing URLs and upload proof screenshots to your Launch Tracker so you can verify every submission.",
     },
     {
       q: "Can I try it for free?",
@@ -87,7 +87,7 @@ export default function LandingPage() {
 
             {/* Subhead */}
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl text-balance leading-relaxed">
-              Tailored launches on 50+ platforms, plus Product Hunt, HN and Reddit launch prep. Built for indie devs.
+              Tailored launches on 35 platforms, plus Product Hunt, HN and Reddit launch prep. Built for indie devs.
             </p>
 
             {/* Action Buttons */}
@@ -115,7 +115,7 @@ export default function LandingPage() {
             {/* Live Stats Bar */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-12 w-full max-w-4xl">
               <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm">
-                <div className="text-2xl sm:text-3xl font-bold text-white">50+</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white">35</div>
                 <div className="text-xs text-muted-foreground mt-1">Platforms Covered</div>
               </div>
               <div className="p-4 rounded-xl border border-white/5 bg-white/[0.02] backdrop-blur-sm">
@@ -261,7 +261,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">AI Analyzes &amp; Tailors Copy</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Our engine matches your product against 50+ platforms across 4 tiers. It generates custom listings respecting each platform&apos;s limits and community rules.
+                  Our engine matches your product against 35 platforms across 4 tiers. It generates custom listings respecting each platform&apos;s limits and community rules.
                 </p>
               </div>
               <ul className="mt-6 pt-4 border-t border-border/40 space-y-2 text-xs text-muted-foreground">
@@ -282,7 +282,7 @@ export default function LandingPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">Launch Solo or Done-For-You</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Use our Launch Tracker and hour-by-hour checklists to submit yourself, or upgrade to Done-For-You and let our team manually submit to 50+ platforms in 7 days.
+                  Use our Launch Tracker and hour-by-hour checklists to submit yourself, or upgrade to Done-For-You and let our team manually submit to eligible platforms in 7 days.
                 </p>
               </div>
               <ul className="mt-6 pt-4 border-t border-border/40 space-y-2 text-xs text-muted-foreground">
@@ -298,7 +298,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 3. PLATFORMS DIRECTORY (50+ COVERED) */}
+      {/* 3. PLATFORMS DIRECTORY (35 COVERED) */}
       <section id="platforms" className="py-20 border-t border-border/60">
         <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
@@ -502,7 +502,7 @@ export default function LandingPage() {
               <ul className="space-y-3 text-xs sm:text-sm text-foreground/90">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Submit once in 2 minutes. Instant audience fit scoring across 50+ platforms.</span>
+                  <span>Submit once in 2 minutes. Instant audience fit scoring across 35 platforms.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -604,7 +604,7 @@ export default function LandingPage() {
                 </div>
                 <ul className="space-y-2.5 text-xs text-foreground/90 mt-6">
                   <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-indigo-400" /> All 50+ platform matches
+                    <Check className="w-3.5 h-3.5 text-indigo-400" /> All 35 platform matches
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-indigo-400" /> All tailored copy blocks
@@ -642,7 +642,7 @@ export default function LandingPage() {
                     <Check className="w-3.5 h-3.5 text-purple-400" /> Everything in Launch Kit
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-purple-400" /> We submit to 50+ platforms
+                    <Check className="w-3.5 h-3.5 text-purple-400" /> We submit to eligible platforms
                   </li>
                   <li className="flex items-center gap-2">
                     <Check className="w-3.5 h-3.5 text-purple-400" /> 7-day turnaround guarantee

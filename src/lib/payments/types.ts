@@ -33,7 +33,7 @@ export const PLAN_CONFIGS: Record<UserPlan, PlanPricing> = {
     inrAmount: 1999,
     isSubscription: false,
     features: [
-      "All 50+ platform match scores & reasons",
+      "All 35 platform match scores & reasons",
       "All tailored copy blocks (HN, PH, Reddit, directories)",
       "Big Launch Kit (PH taglines, gallery text, checklists)",
       "Show HN title + technical post draft",
@@ -50,7 +50,7 @@ export const PLAN_CONFIGS: Record<UserPlan, PlanPricing> = {
     isSubscription: false,
     features: [
       "Everything in Launch Kit",
-      "Our team submits to 50+ platforms within 7 days",
+      "Our team submits to eligible platforms within 7 days",
       "Proof screenshots & direct live URLs logged in tracker",
       "High-authority directory submissions (DR 50 to 90+)",
       "Priority launch report & executive review",

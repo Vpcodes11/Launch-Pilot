@@ -37,7 +37,7 @@ def run_tests():
         assert "You shipped it. Now get it seen." in hero_text, "Hero headline mismatch"
 
         # Check key sections exist
-        assert page.locator("text=Tailored launches on 50+ platforms").count() > 0, "Subhead missing"
+        assert page.locator("text=Tailored launches on 35 platforms").count() > 0, "Subhead missing"
         assert page.locator("text=From fresh build to everywhere in 3 steps").count() > 0, "How it works missing"
         assert page.locator("text=Platforms We Cover").count() > 0, "Platforms directory missing"
         assert page.locator("text=Doing it alone vs. with LaunchPilot").count() > 0, "Comparison section missing"
@@ -227,12 +227,7 @@ def run_tests():
         page.goto(f"{base_url}/admin", wait_until="networkidle")
         page.wait_for_timeout(300)
 
-        # Check role gate
-        if page.locator("text=Admin Access Restricted").count() > 0:
-            print("  • Admin access restricted for standard user (Role Check Passed).")
-            # Switch to Admin mode
-            page.click("button:has-text('Switch to Admin Demo Mode')")
-            page.wait_for_timeout(500)
+        page.get_by_text("Done-For-You Queue", exact=False).first.wait_for()
 
         assert page.locator("text=Done-For-You Queue").count() > 0
         assert page.locator("text=Platforms Database").count() > 0

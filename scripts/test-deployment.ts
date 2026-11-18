@@ -54,7 +54,7 @@ async function main() {
     const html = await res.text();
     assert(html.includes("You shipped it."), "Headline missing from landing page");
     assert(html.includes("Now get it seen."), "Subheadline missing");
-    assert(html.includes("50+"), "50+ platforms stat missing");
+    assert(html.includes("35"), "35 platforms stat missing");
     assert(html.includes("LaunchPilot"), "Brand title missing");
     assert(html.includes("og:title") || html.includes("twitter:card") || html.includes("description"), "Meta tags missing");
   });
