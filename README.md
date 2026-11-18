@@ -37,7 +37,7 @@ LaunchPilot solves the most agonizing bottleneck for software developers: **dist
 
 ## 🛠️ Tech Stack
 
-- **Framework**: [Next.js 14](https://nextjs.org/) (App Router, Server & Client Components)
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router, Server & Client Components)
 - **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict typing throughout)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) with modern dark-mode indie aesthetic, custom gradients, and glowing borders
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/) patterns with `@radix-ui` accessible primitives and [Sonner](https://sonner.emilkowal.ski/) toast notifications

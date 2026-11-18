@@ -15,10 +15,10 @@ const trackerInput = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const { productId } = params;
+    const { productId } = await params;
     const product = await DataService.getProduct(productId);
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -37,10 +37,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const { productId } = params;
+    const { productId } = await params;
     const viewer = await DataService.getCurrentUser();
     if (!viewer) return NextResponse.json({ error: "Sign in required" }, { status: 401 });
     const product = await DataService.getProduct(productId);

@@ -5,10 +5,10 @@ import { previewAnalysis, summarizeProduct } from "@/lib/services/report-access"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const product = await DataService.getProduct(id);
 
     if (!product) {
@@ -28,10 +28,10 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const product = await DataService.getProduct(id);
     if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
     const supplied = await req.json();
