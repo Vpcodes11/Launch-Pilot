@@ -50,7 +50,7 @@ export const PLAN_CONFIGS: Record<UserPlan, PlanPricing> = {
     isSubscription: false,
     features: [
       "Everything in Launch Kit",
-      "Our team submits to eligible platforms within 7 days",
+      "Manual submissions to eligible platforms",
       "Proof screenshots & direct live URLs logged in tracker",
       "High-authority directory submissions (DR 50 to 90+)",
       "Priority launch report & executive review",

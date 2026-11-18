@@ -202,7 +202,7 @@ export default function PricingPage() {
         <div className="p-6 rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-950/20 to-card/60 flex flex-col justify-between relative shadow-xl">
           <div className="absolute -top-3 left-1/2 -translate-x-1/2">
             <Badge variant="outline" className="border-purple-400 text-purple-300 bg-purple-900/40 text-[10px] uppercase font-bold py-0.5">
-              Best ROI
+              Hands-on submission
             </Badge>
           </div>
           <div>
@@ -220,7 +220,7 @@ export default function PricingPage() {
                 <Check className="w-3.5 h-3.5 text-purple-400" /> Submissions to eligible platforms
               </li>
               <li className="flex items-center gap-2">
-                <Check className="w-3.5 h-3.5 text-purple-400" /> 7-day turnaround guarantee
+                <Check className="w-3.5 h-3.5 text-purple-400" /> Target: 7 business days for submissions
               </li>
               <li className="flex items-center gap-2">
                 <Check className="w-3.5 h-3.5 text-purple-400" /> Proof screenshots uploaded

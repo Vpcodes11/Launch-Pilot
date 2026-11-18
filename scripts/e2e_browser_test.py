@@ -43,6 +43,20 @@ def run_tests():
         assert page.locator("text=Doing it alone vs. with LaunchPilot").count() > 0, "Comparison section missing"
         assert page.locator("text=Frequently Asked Questions").count() > 0, "FAQ section missing"
         
+        preview = page.get_by_role("region", name="Launch kit preview")
+        preview.get_by_role("button", name="Show HN", exact=True).click()
+        assert preview.get_by_role("button", name="Show HN", exact=True).get_attribute("aria-pressed") == "true"
+        preview.get_by_role("heading", name="Technical introduction").wait_for()
+        preview.get_by_role("button", name="Reddit", exact=True).click()
+        preview.get_by_role("heading", name="Founder discussion").wait_for()
+
+        platform_search = page.get_by_role("textbox", name="Search platforms")
+        platform_search.fill("no-such-platform-123")
+        page.get_by_text("No platforms match your filters.").wait_for()
+        page.get_by_role("button", name="Clear filters").click()
+        assert platform_search.input_value() == ""
+        page.get_by_text("35 of 35 platforms", exact=True).wait_for()
+
         # Test FAQ accordion click
         first_faq = page.locator("text=How does the AI analysis actually work?").first
         first_faq.click()
