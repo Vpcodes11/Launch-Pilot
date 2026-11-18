@@ -1,0 +1,32 @@
+name: Verify Next.js upgrade
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: github.head_ref == 'next15-staging-upgrade' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: next15-staging-upgrade
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --package-lock-only --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: Record the verified lockfile
+        run: |
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'Lock verified Next.js dependencies'
+            git push origin HEAD:next15-staging-upgrade
+          fi
