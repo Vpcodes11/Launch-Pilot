@@ -175,6 +175,19 @@ export class DataService {
     return mockStore.getProductPlatforms(productId);
   }
 
+  static async setProductPlatforms(productId: string, items: ProductPlatform[]): Promise<void> {
+    try {
+      const supabase = createServerSupabase();
+      if (supabase) {
+        await supabase.from("product_platforms").upsert(items);
+        return;
+      }
+    } catch {
+      // Fallback
+    }
+    mockStore.setProductPlatforms(productId, items);
+  }
+
   static async updateProductPlatform(
     productId: string,
     platformId: string,

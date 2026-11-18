@@ -64,6 +64,7 @@ export async function POST(
     });
 
     // Save product platforms
+    await DataService.setProductPlatforms(product.id, matchedItems);
     for (const item of matchedItems) {
       await DataService.updateProductPlatform(product.id, item.platform_id, item);
     }

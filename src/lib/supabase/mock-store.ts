@@ -341,7 +341,27 @@ class MockStore {
   ): ProductPlatform | null {
     const list = this.productPlatforms.get(productId) || [];
     const index = list.findIndex((pp) => pp.platform_id === platformId || pp.id === platformId);
-    if (index === -1) return null;
+    if (index === -1) {
+      const plat = this.platforms.find((p) => p.id === platformId || p.slug === platformId);
+      const newItem: ProductPlatform = {
+        id: `pp-${productId}-${platformId}`,
+        product_id: productId,
+        platform_id: platformId,
+        match_score: 80,
+        match_reason: "",
+        generated_copy: { title_or_tagline: "", body_or_description: "", tone_applied: "" },
+        status: "not started",
+        live_url: null,
+        proof_url: null,
+        submitted_at: null,
+        utm_link: "",
+        platform: plat,
+        ...updates,
+      };
+      list.push(newItem);
+      this.productPlatforms.set(productId, list);
+      return newItem;
+    }
     list[index] = { ...list[index], ...updates };
     this.productPlatforms.set(productId, list);
     return list[index];
