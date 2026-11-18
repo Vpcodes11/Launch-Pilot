@@ -41,7 +41,7 @@ LaunchPilot solves the most agonizing bottleneck for software developers: **dist
 - **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict typing throughout)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) with modern dark-mode indie aesthetic, custom gradients, and glowing borders
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/) patterns with `@radix-ui` accessible primitives and [Sonner](https://sonner.emilkowal.ski/) toast notifications
-- **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL with Row Level Security, Auth with Magic Link & Google, Storage bucket)
+- **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL with Row Level Security, email code sign-in, Storage bucket)
 - **AI Engine**: OpenAI (`gpt-4o-mini`) & Anthropic (`claude-3-5-sonnet`) with deterministic heuristic fallback engine
 - **Payments**: Provider abstraction supporting **Stripe** (USD) and **Razorpay** (INR) with signature verification
 - **Emails**: [Resend](https://resend.com/) with responsive dark HTML templates
@@ -168,6 +168,16 @@ RESEND_API_KEY="re_..."
 2. Go to the **SQL Editor**.
 3. Run the migration script located at `supabase/migrations/20240101000000_init.sql`. This creates all tables (`profiles`, `products`, `platforms`, `product_platforms`, `orders`), configures Row Level Security (RLS) policies, and establishes the auto-profile trigger on `auth.users`.
 4. Run the seed script located at `supabase/seed.sql` to populate the 35+ verified launch platforms.
+
+### Configure founder sign-in
+
+Keep the Email provider enabled in Supabase Auth. Under **Authentication → Email Templates**, set both **Confirm signup** and **Magic Link** to show the one-time code, using a body such as the following.
+
+```html
+<p>Your LaunchPilot sign-in code is <strong>{{ .Token }}</strong>.</p>
+```
+
+The dashboard and submission form verify the code through Supabase Auth. Configure your production SMTP provider and test both first-time sign-up and repeat sign-in before accepting customers. The local demo uses its seeded account and skips email delivery.
 
 ### 4. Run the Development Server
 

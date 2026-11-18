@@ -201,19 +201,18 @@ def run_tests():
         assert page.locator("text=Launch Tracker").count() > 0
         assert page.locator("text=Overall Launch Progress").count() > 0
 
-        # Check table columns
-        assert page.locator("text=Platform").count() > 0
-        assert page.locator("text=Tier").count() > 0
-        assert page.locator("text=Status").count() > 0
-        assert page.locator("text=Live URL / Proof").count() > 0
-        assert page.locator("text=Unique UTM Link").count() > 0
+        tracker_search = page.get_by_role("searchbox", name="Search tracked platforms")
+        tracker_search.fill("no-matching-platform")
+        page.get_by_text("No matching platforms.").wait_for()
+        page.get_by_role("button", name="Clear filters").click()
 
-        # Test updating status dropdown on first row
-        first_status_select = page.locator("select").first
+        first_status_select = page.get_by_role("combobox", name="Status for", exact=False).first
         initial_val = first_status_select.input_value()
         new_val = "live" if initial_val != "live" else "submitted"
-        first_status_select.select_option(new_val)
-        page.wait_for_timeout(500)
+        with page.expect_response(lambda response: "/api/tracker/" in response.url and response.request.method == "PATCH") as saved:
+            first_status_select.select_option(new_val)
+        assert saved.value.ok
+        assert saved.value.json()["item"]["status"] == new_val
         print(f"  ✓ Status changed from '{initial_val}' to '{new_val}' with instant save.")
 
         # Check UTM copy button
@@ -230,8 +229,15 @@ def run_tests():
         print("\n[TEST 6] Testing Founder Dashboard (/dashboard)...")
         page.goto(f"{base_url}/dashboard", wait_until="networkidle")
         assert page.locator("text=Founder Dashboard").count() > 0
-        assert page.locator("text=Your Products").count() > 0
-        assert page.locator("text=DevScribe").count() > 0
+        page.get_by_role("heading", name="Your products").wait_for()
+        search = page.get_by_role("searchbox", name="Search products")
+        search.fill("no-matching-product")
+        page.get_by_role("heading", name="No matching products").wait_for()
+        page.get_by_role("button", name="Clear filters").click()
+        page.get_by_role("link", name="DevScribe", exact=True).wait_for()
+        page.get_by_role("button", name="Preparing", exact=True).click()
+        assert page.get_by_role("button", name="Preparing", exact=True).get_attribute("aria-pressed") == "true"
+        page.get_by_role("button", name="All products", exact=True).click()
         print("  ✓ Dashboard renders product list with status tags and action links.")
 
         # -------------------------------------------------------------

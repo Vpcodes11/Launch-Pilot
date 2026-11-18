@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
+  ArrowLeft,
   Rocket,
   Sparkles,
   BarChart3,
@@ -56,11 +57,14 @@ export default function ProductReportPage() {
       const res = await fetch(`/api/analyze/${productId}`, { method: "POST" });
       const data = await res.json();
 
-      if (data.analysis) {
-        setProduct((prev) => (prev ? { ...prev, ai_analysis: data.analysis, status: "analyzed" } : prev));
-        setAnalysisProgress(100);
-        toast.success("AI analysis complete!");
-      }
+      if (!res.ok || !data.analysis) throw new Error();
+      setProduct((prev) => prev ? {
+        ...prev,
+        ai_analysis: data.analysis,
+        status: data.productStatus ?? prev.status,
+      } : prev);
+      setAnalysisProgress(100);
+      toast.success("Launch report ready");
     } catch (err) {
       console.error(err);
       toast.error("Analysis generation failed. Please retry.");
@@ -113,11 +117,15 @@ export default function ProductReportPage() {
     }
   }, [searchParams, productId]);
 
-  const handleCopyText = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedKey(key);
-    toast.success("Copied to clipboard!");
-    setTimeout(() => setCopiedKey(null), 2000);
+  const handleCopyText = async (text: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((current) => current === key ? null : current), 2000);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Couldn’t copy the draft. Select the text to copy it.");
+    }
   };
 
   const handleRegenerateCopy = async (platformSlug: string) => {
@@ -216,15 +224,19 @@ export default function ProductReportPage() {
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-8">
-      {/* Product Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-border/60 gap-4">
-        <div className="flex items-start gap-4">
+      <header className="space-y-5 rounded-3xl border border-indigo-300/20 bg-gradient-to-br from-indigo-950 via-[#151e38] to-slate-950 p-5 sm:p-8">
+        <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-sm text-indigo-200">
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 hover:text-white"><ArrowLeft aria-hidden="true" className="size-4" /> Workspace</Link>
+          <span aria-hidden="true" className="text-slate-500">/</span>
+          <span aria-current="page" className="text-slate-300">Launch report</span>
+        </nav>
+        <div className="flex min-w-0 items-start gap-4">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-2xl shadow-lg shadow-indigo-500/20 shrink-0">
             {product.name.slice(0, 1)}
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight text-white sm:text-4xl">
                 {product.name}
               </h1>
               <Badge variant="outline" className="border-indigo-500/30 text-indigo-300">
@@ -244,7 +256,7 @@ export default function ProductReportPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 border-t border-white/10 pt-4">
           <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs">
             <Link href={`/product/${product.id}/tracker`}>
               <BarChart3 className="w-4 h-4 text-indigo-400" />
@@ -260,7 +272,7 @@ export default function ProductReportPage() {
             className="gap-1.5 text-xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${analyzing ? "animate-spin" : ""}`} />
-            {analyzing ? "Analyzing..." : "Re-run Analysis"}
+            {analyzing ? "Analyzing…" : analysis ? "Rerun analysis" : "Run analysis"}
           </Button>
 
           {!isUnlocked && (
@@ -275,7 +287,7 @@ export default function ProductReportPage() {
             </Button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* Analysis Progress Banner if in progress */}
       {analyzing && (
@@ -294,7 +306,7 @@ export default function ProductReportPage() {
       {/* Strategic Executive Summary Card */}
       {analysis && (
         <div className="p-6 rounded-2xl border border-border/80 bg-card/60 backdrop-blur-xl space-y-4 glow-card">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-400" />
               Strategic Positioning Angle
@@ -316,8 +328,10 @@ export default function ProductReportPage() {
 
       {/* Core Tabs Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-border/60 pb-3 gap-4">
-        <div className="flex items-center gap-2 bg-secondary/60 p-1 rounded-xl">
+        <div role="group" aria-label="Report section" className="flex flex-wrap items-center gap-1.5 rounded-xl bg-secondary/60 p-1">
           <button
+            type="button"
+            aria-pressed={activeTab === "matches"}
             onClick={() => setActiveTab("matches")}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
               activeTab === "matches"
@@ -328,6 +342,8 @@ export default function ProductReportPage() {
             Platform Matches ({matches.length})
           </button>
           <button
+            type="button"
+            aria-pressed={activeTab === "copy"}
             onClick={() => setActiveTab("copy")}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
               activeTab === "copy"
@@ -338,6 +354,8 @@ export default function ProductReportPage() {
             Tailored Copy ({Object.keys(copies).length})
           </button>
           <button
+            type="button"
+            aria-pressed={activeTab === "launch_kit"}
             onClick={() => setActiveTab("launch_kit")}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               activeTab === "launch_kit"
@@ -380,6 +398,14 @@ export default function ProductReportPage() {
       {/* TAB 1: PLATFORM MATCHES */}
       {activeTab === "matches" && (
         <div className="space-y-4">
+          {analysis && filteredMatches.length === 0 && (
+            <div className="rounded-2xl border border-white/10 bg-slate-900/70 p-6 text-sm text-slate-300">
+              <p>No platform matches for this tier.</p>
+              {selectedTierFilter !== "all" && (
+                <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => setSelectedTierFilter("all")}>Show all tiers</Button>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {filteredMatches.map((match, index) => {
               const isLocked = !isUnlocked && index >= 5;

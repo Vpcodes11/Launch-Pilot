@@ -151,21 +151,25 @@ export class DataService {
     return mockStore.createProduct(newProductData);
   }
 
-  static async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+  static async updateProduct(id: string, updates: Partial<Product>, expectedStatus?: Product["status"]): Promise<Product | null> {
     try {
       const supabase = createServerSupabase();
       if (supabase) {
-        const { data, error } = await supabase.from("products").update(updates).eq("id", id).select().single();
+        const query = supabase.from("products").update(updates).eq("id", id);
+        if (expectedStatus) query.eq("status", expectedStatus);
+        const { data, error } = await query.select().maybeSingle();
         if (!error && data) return data as Product;
       }
     } catch {
-      // Fallback
+      // Fallback to the demo store when enabled.
     }
     if (!isDemoMode()) return null;
+    const product = mockStore.getProduct(id);
+    if (expectedStatus && product?.status !== expectedStatus) return null;
     return mockStore.updateProduct(id, updates);
   }
 
-  // Product Platforms (Tracker)
+  // Product platforms
   static async getProductPlatforms(productId: string): Promise<ProductPlatform[]> {
     try {
       const supabase = createServerSupabase();
@@ -186,18 +190,34 @@ export class DataService {
     return mockStore.getProductPlatforms(productId);
   }
 
-  static async setProductPlatforms(productId: string, items: ProductPlatform[]): Promise<void> {
-    try {
-      const supabase = createServerSupabase();
-      if (supabase) {
-        await supabase.from("product_platforms").upsert(items);
-        return;
-      }
-    } catch {
-      // Fallback
+  static async savePlatformMatches(productId: string, items: ProductPlatform[]): Promise<void> {
+    if (items.length === 0) return;
+    const rows = items.map(({ platform_id, match_score, match_reason, generated_copy, utm_link }) => ({
+      product_id: productId,
+      platform_id,
+      match_score,
+      match_reason,
+      generated_copy,
+      utm_link,
+    }));
+
+    const supabase = createServerSupabase();
+    if (supabase) {
+      const { error } = await supabase.from("product_platforms").upsert(rows, {
+        onConflict: "product_id,platform_id",
+        defaultToNull: false,
+      });
+      if (error) throw error;
+      return;
     }
-    if (!isDemoMode()) throw new Error("Launch Pilot data operation failed");
-    mockStore.setProductPlatforms(productId, items);
+
+    if (!isDemoMode()) throw new Error("Database is unavailable");
+    const existing = new Map(mockStore.getProductPlatforms(productId).map((item) => [item.platform_id, item]));
+    items.forEach((item, index) => {
+      const saved = existing.get(item.platform_id);
+      existing.set(item.platform_id, saved ? { ...saved, ...rows[index] } : item);
+    });
+    mockStore.setProductPlatforms(productId, Array.from(existing.values()));
   }
 
   static async updateProductPlatform(

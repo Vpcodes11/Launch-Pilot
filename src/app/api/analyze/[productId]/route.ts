@@ -29,19 +29,20 @@ export async function POST(
     // Run AI analysis
     const analysis = await AIAnalyzer.analyzeProduct(product, platforms);
 
-    // Save analysis on product and update status
-    await DataService.updateProduct(productId, {
-      ai_analysis: analysis,
-      status: product.status === "draft" ? "analyzed" : product.status,
+    const platformsBySlug = new Map(platforms.map((platform) => [platform.slug, platform]));
+    const seen = new Set<string>();
+    analysis.top_matches = analysis.top_matches.filter(({ platform_slug }) => {
+      if (!platformsBySlug.has(platform_slug) || seen.has(platform_slug)) return false;
+      seen.add(platform_slug);
+      return true;
     });
 
-    // Populate or update product_platforms entries for the top matched platforms
     const matchedItems: ProductPlatform[] = analysis.top_matches.map((match) => {
-      const platform = platforms.find((p) => p.slug === match.platform_slug);
+      const platform = platformsBySlug.get(match.platform_slug)!;
       const tailoredCopy = analysis.tailored_copies[match.platform_slug] || {
         title_or_tagline: product.tagline,
         body_or_description: product.short_description,
-        tone_applied: platform?.tone_notes || "",
+        tone_applied: platform.tone_notes,
       };
 
       const cleanUrl = product.url.replace(/\/+$/, "");
@@ -50,7 +51,7 @@ export async function POST(
       return {
         id: `pp-${product.id}-${match.platform_slug}`,
         product_id: product.id,
-        platform_id: platform?.id || match.platform_slug,
+        platform_id: platform.id,
         match_score: match.score,
         match_reason: match.reason,
         generated_copy: tailoredCopy,
@@ -63,11 +64,12 @@ export async function POST(
       };
     });
 
-    // Save product platforms
-    await DataService.setProductPlatforms(product.id, matchedItems);
-    for (const item of matchedItems) {
-      await DataService.updateProductPlatform(product.id, item.platform_id, item);
-    }
+    await DataService.savePlatformMatches(product.id, matchedItems);
+    const promoted = product.status === "draft"
+      ? await DataService.updateProduct(productId, { ai_analysis: analysis, status: "analyzed" }, "draft")
+      : null;
+    const updated = promoted ?? await DataService.updateProduct(productId, { ai_analysis: analysis });
+    if (!updated) throw new Error("Failed to save launch analysis");
 
     // Send transactional email (Analysis Ready)
     try {
@@ -85,6 +87,7 @@ export async function POST(
       success: true,
       analysis,
       topMatchesCount: analysis.top_matches.length,
+      productStatus: updated.status,
     });
   } catch (error) {
     console.error("Analysis API error:", error);

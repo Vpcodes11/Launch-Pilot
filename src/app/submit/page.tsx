@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
+import { EmailSignIn } from "@/components/email-sign-in";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
+import { isDemoMode } from "@/lib/supabase/demo";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -68,9 +71,10 @@ export default function SubmitPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [draftSavedTime, setDraftSavedTime] = useState<string | null>(null);
 
-  // Auth state simulation for the final step
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [authEmail, setAuthEmail] = useState("");
+  const demoMode = isDemoMode();
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [checkingSession, setCheckingSession] = useState(!demoMode);
+  const canSubmit = demoMode || sessionEmail !== null;
 
   // Load draft from localStorage on mount
   useEffect(() => {
@@ -84,13 +88,28 @@ export default function SubmitPage() {
       // ignore
     }
 
-    // Check if user has an active session
-    const savedUser = localStorage.getItem("launchpilot_user_email");
-    if (savedUser) {
-      setIsLoggedIn(true);
-      setAuthEmail(savedUser);
-    }
   }, []);
+
+  useEffect(() => {
+    if (demoMode) return;
+    const client = createClient();
+    if (!client) {
+      setCheckingSession(false);
+      return;
+    }
+
+    let active = true;
+    client.auth.getUser()
+      .then(({ data }) => {
+        if (active) setSessionEmail(data.user?.email ?? null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setCheckingSession(false);
+      });
+
+    return () => { active = false; };
+  }, [demoMode]);
 
   // Auto-save draft on form change
   const updateField = <K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) => {
@@ -143,22 +162,8 @@ export default function SubmitPage() {
     }
   };
 
-  const handleMagicLinkSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!authEmail.includes("@")) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
-    localStorage.setItem("launchpilot_user_email", authEmail);
-    setIsLoggedIn(true);
-    toast.success("Magic link verified! You are now logged in.");
-  };
-
   const handleFinalSubmit = async () => {
-    if (!isLoggedIn) {
-      toast.error("Please authenticate at the final step to save your product.");
-      return;
-    }
+    if (!canSubmit || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
@@ -171,17 +176,16 @@ export default function SubmitPage() {
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 401) setSessionEmail(null);
         throw new Error(data.error || "Failed to create product");
       }
 
-      // Clear draft
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
-      toast.success("Product submitted successfully! Generating AI launch analysis...");
-
-      // Kick off analysis
-      fetch(`/api/analyze/${data.product.id}`, { method: "POST" }).catch(console.error);
-
-      // Redirect to product report
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {
+        // The product is already saved on the server.
+      }
+      toast.success("Product submitted. Opening your launch report.");
       router.push(`/product/${data.product.id}`);
     } catch (err) {
       console.error(err);
@@ -212,12 +216,10 @@ export default function SubmitPage() {
       founder_twitter: "mayalin_builds",
       founder_linkedin: "mayalin",
       founder_github: "mayalin",
-      founder_email: authEmail || "maya@fastfeedback.io",
+      founder_email: "maya@fastfeedback.io",
       launch_goal: "all",
     };
     setFormData(demoData);
-    setAuthEmail("maya@fastfeedback.io");
-    setIsLoggedIn(true);
     toast.success("Sample indie product data prefilled!");
   };
 
@@ -245,15 +247,17 @@ export default function SubmitPage() {
               <Check className="w-3 h-3 text-emerald-400" /> {draftSavedTime}
             </span>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handlePrefillDemo}
-            className="text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"
-          >
-            Prefill Demo Product
-          </Button>
+          {demoMode && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handlePrefillDemo}
+              className="text-xs border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10"
+            >
+              Prefill Demo Product
+            </Button>
+          )}
         </div>
       </div>
 
@@ -268,11 +272,12 @@ export default function SubmitPage() {
           const isActive = step === s.num;
           const isDone = step > s.num;
           return (
-            <div
+            <button
               key={s.num}
-              onClick={() => {
-                if (isDone) setStep(s.num as 1 | 2 | 3 | 4);
-              }}
+              type="button"
+              aria-current={isActive ? "step" : undefined}
+              disabled={!isDone || isSubmitting}
+              onClick={() => setStep(s.num as 1 | 2 | 3 | 4)}
               className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
                 isActive
                   ? "border-indigo-500 bg-indigo-500/10 text-white font-semibold"
@@ -285,7 +290,7 @@ export default function SubmitPage() {
                 {isDone ? "✓ Done" : `Step 0${s.num}`}
               </div>
               <div className="text-xs sm:text-sm truncate">{s.label}</div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -583,10 +588,7 @@ export default function SubmitPage() {
                   type="email"
                   placeholder="alex@yourproduct.com"
                   value={formData.founder_email}
-                  onChange={(e) => {
-                    updateField("founder_email", e.target.value);
-                    if (!authEmail) setAuthEmail(e.target.value);
-                  }}
+                  onChange={(e) => updateField("founder_email", e.target.value)}
                 />
               </div>
             </div>
@@ -694,62 +696,24 @@ export default function SubmitPage() {
               </div>
             </div>
 
-            {/* Authentication Gate at Final Step (as specified in prompt) */}
-            <div className="mt-8 pt-6 border-t border-border/60">
-              <div className="flex items-center gap-2 mb-3">
-                <Mail className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-sm font-semibold text-white">
-                  Founder Verification &amp; Login
-                </h3>
-              </div>
-
-              {isLoggedIn ? (
-                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                    <div>
-                      <div className="text-xs font-semibold text-emerald-300">
-                        Authenticated as {authEmail || formData.founder_email}
-                      </div>
-                      <div className="text-[11px] text-muted-foreground">
-                        Your product and tailored copy will be linked to this account.
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground hover:text-white"
-                    onClick={() => {
-                      setIsLoggedIn(false);
-                      localStorage.removeItem("launchpilot_user_email");
-                    }}
-                  >
-                    Change
-                  </Button>
-                </div>
+            <section aria-labelledby="submission-account" className="mt-8 space-y-3 border-t border-border/60 pt-6">
+              <h3 id="submission-account" className="flex items-center gap-2 text-sm font-semibold text-white">
+                <Mail aria-hidden="true" className="size-4 text-indigo-300" /> Founder account
+              </h3>
+              {checkingSession ? (
+                <p role="status" className="text-sm text-slate-300">Checking your session…</p>
+              ) : canSubmit ? (
+                <p className="flex items-center gap-2 break-all rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+                  <CheckCircle2 aria-hidden="true" className="size-4 shrink-0" />
+                  {demoMode ? "Local demo account" : "Signed in as " + sessionEmail}
+                </p>
               ) : (
-                <div className="p-5 rounded-xl border border-indigo-500/30 bg-indigo-950/20 space-y-4">
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    We save your product and track your submissions under your founder account. Enter your email to authenticate via magic link or test account.
-                  </p>
-
-                  <form onSubmit={handleMagicLinkSubmit} className="flex gap-2">
-                    <Input
-                      type="email"
-                      placeholder="founder@example.com"
-                      value={authEmail || formData.founder_email}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      required
-                    />
-                    <Button type="submit" variant="brand" className="shrink-0 text-xs">
-                      Verify &amp; Continue
-                    </Button>
-                  </form>
-                </div>
+                <>
+                  <p className="text-sm text-slate-300">Sign in to save this product and access its launch report later.</p>
+                  <EmailSignIn initialEmail={formData.founder_email} onSignedIn={setSessionEmail} />
+                </>
               )}
-            </div>
+            </section>
           </div>
         )}
 
@@ -761,6 +725,7 @@ export default function SubmitPage() {
               variant="outline"
               size="sm"
               onClick={handlePrevStep}
+              disabled={isSubmitting}
               className="gap-1.5"
             >
               <ArrowLeft className="w-4 h-4" /> Back
@@ -784,14 +749,14 @@ export default function SubmitPage() {
               type="button"
               variant="brand"
               size="lg"
-              disabled={isSubmitting || !isLoggedIn}
+              disabled={isSubmitting || !canSubmit}
               onClick={handleFinalSubmit}
-              className="gap-2 px-8"
+              className="h-auto min-h-12 gap-2 whitespace-normal px-4 text-left sm:px-8"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating Launch Report...
+                  Saving product…
                 </>
               ) : (
                 <>

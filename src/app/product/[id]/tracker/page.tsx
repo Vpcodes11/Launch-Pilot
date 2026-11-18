@@ -1,404 +1,284 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import {
-  Rocket,
-  CheckCircle2,
-  Clock,
-  ExternalLink,
-  Copy,
-  Check,
-  Search,
-  ArrowLeft,
-  Sparkles,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { ProductPlatform, Product, SubmissionStatus } from "@/types";
-import { formatDate } from "@/lib/utils";
+import { useParams } from "next/navigation";
+import { ArrowLeft, ArrowUpRight, Check, Copy, Globe2, Radio, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { formatDate } from "@/lib/utils";
+import type { Product, ProductPlatform, SubmissionStatus } from "@/types";
 
-export default function LaunchTrackerPage() {
-  const params = useParams();
-  const productId = params?.id as string;
+const statusLabels: Record<SubmissionStatus, string> = {
+  "not started": "Not started",
+  submitted: "Submitted",
+  "pending review": "Pending review",
+  live: "Live",
+  rejected: "Rejected",
+};
+const statuses = Object.keys(statusLabels) as SubmissionStatus[];
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [items, setItems] = useState<ProductPlatform[]>([]);
-  const [loading, setLoading] = useState(true);
+type Tracker = { status: "loading" | "error" | "missing" } | { status: "ready"; product: Product; items: ProductPlatform[] };
 
-  // Filters & Search
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [copiedUtm, setCopiedUtm] = useState<string | null>(null);
+function publicUrl(value: string | null | undefined) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
 
-  useEffect(() => {
-    async function loadTracker() {
-      try {
-        const res = await fetch(`/api/tracker/${productId}`);
-        const data = await res.json();
-        if (data.items) {
-          setItems(data.items);
-          setProduct(data.product);
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    if (productId) {
-      loadTracker();
-    }
-  }, [productId]);
+function TrackerRow({
+  item,
+  productId,
+  onSave,
+}: {
+  item: ProductPlatform;
+  productId: string;
+  onSave: (item: ProductPlatform) => void;
+}) {
+  const [listing, setListing] = useState(item.live_url ?? "");
+  const [pending, setPending] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const name = item.platform?.name ?? item.platform_id;
+  const submitUrl = publicUrl(item.platform?.submit_url) ?? publicUrl(item.platform?.url);
+  const liveUrl = publicUrl(item.live_url);
+  const proofUrl = publicUrl(item.proof_url);
+  const trackingUrl = publicUrl(item.utm_link);
 
-  const updateItemStatus = async (platformId: string, newStatus: SubmissionStatus) => {
+  async function save(changes: { status?: SubmissionStatus; live_url?: string | null }) {
+    if (pending) return;
+    setPending(true);
     try {
-      const res = await fetch(`/api/tracker/${productId}`, {
+      const response = await fetch("/api/tracker/" + productId, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platformId,
-          status: newStatus,
-        }),
+        body: JSON.stringify({ platformId: item.platform_id, ...changes }),
       });
-      const data = await res.json();
 
-      if (data.success) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.platform_id === platformId || item.id === platformId
-              ? { ...item, status: newStatus, submitted_at: new Date().toISOString() }
-              : item
-          )
-        );
-        toast.success(`Status updated to "${newStatus}"`);
-      }
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      if (!data.success || !data.item) throw new Error();
+      onSave(data.item);
+      toast.success(changes.status ? "Submission status saved" : "Listing URL saved");
     } catch {
-      toast.error("Failed to update status");
+      toast.error("Couldn’t save " + name + ". Try again.");
+    } finally {
+      setPending(false);
     }
-  };
+  }
 
-  const updateLiveUrl = async (platformId: string, liveUrl: string) => {
+  function saveListing(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const draft = listing.trim();
+    const url = publicUrl(draft);
+    if (draft && !url) {
+      toast.error("Enter an HTTP or HTTPS listing URL.");
+      return;
+    }
+    void save({ live_url: draft || null });
+  }
+
+  async function copyLink() {
     try {
-      await fetch(`/api/tracker/${productId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platformId,
-          live_url: liveUrl,
-        }),
-      });
-      setItems((prev) =>
-        prev.map((item) =>
-          item.platform_id === platformId || item.id === platformId
-            ? { ...item, live_url: liveUrl }
-            : item
-        )
-      );
-      toast.success("Live URL saved!");
+      await navigator.clipboard.writeText(item.utm_link);
+      setCopied(true);
+      toast.success("Tracking link copied");
     } catch {
-      toast.error("Failed to save live URL");
+      toast.error("Couldn’t copy the link. Open it to copy the address.");
     }
-  };
-
-  const copyUtm = (utm: string, id: string) => {
-    navigator.clipboard.writeText(utm);
-    setCopiedUtm(id);
-    toast.success("Unique UTM link copied to clipboard!");
-    setTimeout(() => setCopiedUtm(null), 2000);
-  };
-
-  // Stats
-  const total = items.length;
-  const liveCount = items.filter((i) => i.status === "live").length;
-  const submittedCount = items.filter(
-    (i) => i.status === "submitted" || i.status === "pending review"
-  ).length;
-  const progressPercent = total > 0 ? Math.round(((liveCount + submittedCount * 0.5) / total) * 100) : 0;
-
-  const filteredItems = items.filter((item) => {
-    const name = item.platform?.name || item.platform_id;
-    const matchesSearch = name.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  if (loading) {
-    return (
-      <div className="container mx-auto max-w-7xl px-4 py-24 text-center">
-        <div className="w-12 h-12 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin mx-auto mb-4" />
-        <p className="text-sm text-muted-foreground">Loading launch tracker...</p>
-      </div>
-    );
   }
 
   return (
-    <div className="container mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 space-y-8">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-border/60 gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-white">
-              <Link href={`/product/${productId}`}>
-                <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back to Report
-              </Link>
+    <li className="grid min-w-0 gap-4 border-t border-white/10 p-4 sm:p-5 lg:grid-cols-[minmax(9rem,0.85fr)_minmax(12rem,1.3fr)_minmax(9rem,auto)] lg:items-start">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="break-words font-semibold text-white">{name}</h3>
+          {item.platform?.tier && <Badge variant="outline" className="text-slate-300">Tier {item.platform.tier}</Badge>}
+        </div>
+        {item.submitted_at && <p className="mt-1 text-xs text-slate-400">Submitted {formatDate(item.submitted_at)}</p>}
+        {submitUrl && (
+          <a href={submitUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm text-indigo-200 hover:underline">
+            Visit submission page <ArrowUpRight aria-hidden="true" className="size-3.5" />
+          </a>
+        )}
+      </div>
+      <div className="min-w-0 space-y-2">
+        <form onSubmit={saveListing} className="flex items-center gap-2">
+          <Input type="url" aria-label={"Listing URL for " + name} placeholder="Enter listing URL" value={listing} disabled={pending} onChange={(event) => setListing(event.target.value)} />
+          <Button type="submit" variant="outline" disabled={pending || listing.trim() === (item.live_url ?? "")} aria-label={"Save listing URL for " + name}>Save</Button>
+        </form>
+        <div className="flex flex-wrap items-center gap-3 text-xs text-indigo-200">
+          {liveUrl && <a href={liveUrl} target="_blank" rel="noreferrer" className="hover:underline">Open live listing</a>}
+          {proofUrl && <a href={proofUrl} target="_blank" rel="noreferrer" className="hover:underline">View proof</a>}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+        <select
+          aria-label={"Status for " + name}
+          className="min-h-10 max-w-full rounded-lg border border-input bg-[#111a30] px-2 text-sm text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+          value={item.status}
+          disabled={pending}
+          onChange={(event) => void save({ status: event.target.value as SubmissionStatus })}
+        >
+          {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+        </select>
+        {item.utm_link && (
+          <div className="flex flex-wrap items-center gap-1">
+            <Button type="button" size="sm" variant="ghost" onClick={copyLink} className="min-h-9 gap-1.5 text-slate-300">
+              {copied ? <Check aria-hidden="true" className="size-3.5 text-emerald-300" /> : <Copy aria-hidden="true" className="size-3.5" />}
+              {copied ? "Copied!" : "Copy UTM link"}
             </Button>
-            <span className="text-xs text-muted-foreground">•</span>
-            <span className="text-xs text-indigo-400 font-semibold uppercase tracking-wider">
-              Distribution Engine
-            </span>
+            {trackingUrl && (
+              <a href={trackingUrl} target="_blank" rel="noreferrer" aria-label={"Open tracking link for " + name} className="grid size-9 place-items-center rounded-lg text-indigo-200 hover:bg-white/10">
+                <ArrowUpRight aria-hidden="true" className="size-4" />
+              </a>
+            )}
           </div>
-
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            {product?.name || "Product"} Launch Tracker
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Track live directory listings, submission statuses, proof screenshots, and UTM link performance.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button asChild variant="outline" size="sm" className="text-xs gap-1.5">
-            <Link href={`/product/${productId}`}>
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              View Copy &amp; Launch Kit
-            </Link>
-          </Button>
-        </div>
+        )}
       </div>
+    </li>
+  );
+}
 
-      {/* Progress & Metrics Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {/* Progress Card */}
-        <div className="p-5 rounded-2xl border border-indigo-500/30 bg-card/60 backdrop-blur-md md:col-span-2 space-y-3">
-          <div className="flex items-center justify-between text-xs font-semibold">
-            <span className="text-white flex items-center gap-1.5">
-              <Rocket className="w-4 h-4 text-indigo-400" />
-              Overall Launch Progress
-            </span>
-            <span className="text-indigo-300 font-mono text-sm">{progressPercent}%</span>
+export default function LaunchTrackerPage() {
+  const { id: productId } = useParams<{ id: string }>();
+  const [tracker, setTracker] = useState<Tracker>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | SubmissionStatus>("all");
+  const report = "/product/" + productId;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function load() {
+      try {
+        const response = await fetch("/api/tracker/" + productId, { cache: "no-store", signal: controller.signal });
+        if (controller.signal.aborted) return;
+        if (response.status === 404) {
+          setTracker({ status: "missing" });
+          return;
+        }
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (!data.product || !Array.isArray(data.items)) throw new Error();
+        if (!controller.signal.aborted) setTracker({ status: "ready", product: data.product, items: data.items });
+      } catch {
+        if (!controller.signal.aborted) setTracker({ status: "error" });
+      }
+    }
+    void load();
+    return () => controller.abort();
+  }, [productId, attempt]);
+
+  const items = tracker.status === "ready" ? tracker.items : [];
+  const live = items.filter((item) => item.status === "live").length;
+  const inReview = items.filter((item) => item.status === "submitted" || item.status === "pending review").length;
+  const visible = items.filter((item) =>
+    (filter === "all" || item.status === filter) &&
+    (item.platform?.name ?? item.platform_id).toLowerCase().includes(search.trim().toLowerCase())
+  );
+
+  function saveItem(updated: ProductPlatform) {
+    setTracker((current) => current.status === "ready" && current.product.id === updated.product_id
+      ? { ...current, items: current.items.map((item) => item.id === updated.id ? { ...item, ...updated } : item) }
+      : current);
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-[#0b1020]">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
+        <header className="rounded-3xl border border-indigo-300/20 bg-gradient-to-br from-indigo-950 via-[#151e38] to-slate-950 p-6 sm:p-9">
+          <nav aria-label="Breadcrumb" className="mb-5 flex flex-wrap items-center gap-2 text-sm text-indigo-200">
+            <Link href="/dashboard" className="inline-flex items-center gap-1.5 hover:text-white"><ArrowLeft aria-hidden="true" className="size-4" /> Workspace</Link>
+            {tracker.status === "ready" && <><span aria-hidden="true" className="text-slate-500">/</span><Link href={report} className="hover:text-white">{tracker.product.name}</Link></>}
+          </nav>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Launch Tracker</h1>
+              <p className="mt-3 text-sm text-slate-300 sm:text-base">Track submissions, save live listings, and copy referral links.</p>
+            </div>
+            {tracker.status === "ready" && <Button asChild variant="outline"><Link href={report}>Open launch report</Link></Button>}
           </div>
-          <Progress value={progressPercent} className="h-3" />
-          <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
-            <span>{liveCount} Live Listings</span>
-            <span>{submittedCount} Pending Review</span>
-            <span>{total} Total Targeted</span>
-          </div>
-        </div>
+        </header>
 
-        {/* Live Card */}
-        <div className="p-5 rounded-2xl border border-border/80 bg-card/40 backdrop-blur-md">
-          <div className="text-xs text-muted-foreground mb-1">Live Listings</div>
-          <div className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5" />
-            {liveCount}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1">Approved &amp; indexing</div>
-        </div>
+        {tracker.status === "loading" && <p role="status" className="rounded-2xl border border-white/10 p-6 text-sm text-slate-300">Loading launch tracker…</p>}
 
-        {/* In Progress Card */}
-        <div className="p-5 rounded-2xl border border-border/80 bg-card/40 backdrop-blur-md">
-          <div className="text-xs text-muted-foreground mb-1">Pending / Review</div>
-          <div className="text-2xl font-bold text-amber-400 flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            {submittedCount}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-1">Awaiting directory moderation</div>
-        </div>
-      </div>
+        {tracker.status === "missing" && (
+          <section className="rounded-2xl border border-white/10 bg-slate-900/70 p-6">
+            <h2 className="font-semibold text-white">Tracker unavailable</h2>
+            <p className="mt-2 text-sm text-slate-300">Open your workspace and choose a product you have access to.</p>
+            <Button asChild variant="outline" className="mt-4"><Link href="/dashboard">Go to workspace</Link></Button>
+          </section>
+        )}
 
-      {/* Controls Bar: Search & Status Filter */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 rounded-xl border border-border/80 bg-card/40">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search platform name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 rounded-lg border border-border bg-background/50 text-xs text-white placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
+        {tracker.status === "error" && (
+          <section className="rounded-2xl border border-rose-400/25 bg-rose-400/5 p-6">
+            <h2 role="alert" className="font-semibold text-white">We couldn’t load this tracker.</h2>
+            <Button type="button" variant="outline" className="mt-3" onClick={() => { setTracker({ status: "loading" }); setAttempt((value) => value + 1); }}>Try again</Button>
+          </section>
+        )}
 
-        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
-          {["all", "live", "submitted", "pending review", "not started", "rejected"].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
-                statusFilter === st
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-secondary/60 text-muted-foreground hover:text-white"
-              }`}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
-      </div>
+        {tracker.status === "ready" && (
+          <>
+            <section aria-labelledby="launch-progress" className="rounded-2xl border border-white/10 bg-slate-900/70 p-5 sm:p-6">
+              <h2 id="launch-progress" className="flex items-center gap-2 font-semibold text-white"><Radio aria-hidden="true" className="size-4 text-indigo-300" /> Overall Launch Progress</h2>
+              <dl className="my-4 grid grid-cols-3 gap-2.5">
+                {[
+                  { label: "Live listings", count: live },
+                  { label: "Submitted or in review", count: inReview },
+                  { label: "Target platforms", count: items.length },
+                ].map(({ label, count }) => (
+                  <div key={label} className="rounded-xl bg-white/5 px-3 py-2.5 sm:px-4">
+                    <dt className="text-xs text-slate-300 sm:text-sm">{label}</dt>
+                    <dd className="mt-1 text-xl font-semibold tabular-nums text-white">{count}</dd>
+                  </div>
+                ))}
+              </dl>
+              <Progress value={items.length ? Math.round((live / items.length) * 100) : 0} aria-label="Share of target platforms with live listings" />
+            </section>
 
-      {/* Tracker Table */}
-      <div className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-secondary/60 text-muted-foreground border-b border-border/80 font-semibold uppercase tracking-wider text-[10px]">
-              <tr>
-                <th className="p-4">Platform</th>
-                <th className="p-4">Tier</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">Live URL / Proof</th>
-                <th className="p-4">Unique UTM Link</th>
-                <th className="p-4">Date</th>
-                <th className="p-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                    No platforms matching current filters.
-                  </td>
-                </tr>
+            <section aria-labelledby="tracked-platforms" className="rounded-2xl border border-white/10 bg-slate-900/70">
+              <div className="space-y-4 p-4 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 id="tracked-platforms" className="text-xl font-semibold text-white">Tracked platforms</h2>
+                  <p aria-live="polite" className="text-xs text-slate-400">{visible.length} of {items.length} platforms</p>
+                </div>
+                {items.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <div className="relative min-w-0 flex-1 basis-48">
+                      <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-3 size-4 text-slate-400" />
+                      <Input type="search" aria-label="Search tracked platforms" placeholder="Search platforms" value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" />
+                    </div>
+                    <select aria-label="Filter platforms by status" value={filter} onChange={(event) => setFilter(event.target.value as "all" | SubmissionStatus)} className="h-10 max-w-full rounded-lg border border-input bg-[#111a30] px-3 text-sm text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400">
+                      <option value="all">All statuses</option>
+                      {statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+              {items.length === 0 ? (
+                <div className="border-t border-white/10 p-8 text-center">
+                  <Globe2 aria-hidden="true" className="mx-auto mb-3 size-6 text-indigo-300" />
+                  <p className="mb-4 text-sm text-slate-300">Run your launch analysis to add platforms to this tracker.</p>
+                  <Button asChild variant="outline"><Link href={report}>Open launch report</Link></Button>
+                </div>
+              ) : visible.length === 0 ? (
+                <div className="border-t border-white/10 p-8 text-center">
+                  <p className="mb-3 text-sm text-slate-300">No matching platforms.</p>
+                  <Button type="button" variant="outline" onClick={() => { setSearch(""); setFilter("all"); }}>Clear filters</Button>
+                </div>
               ) : (
-                filteredItems.map((item) => {
-                  const platName = item.platform?.name || item.platform_id;
-                  const tier = item.platform?.tier || 2;
-                  const submitUrl = item.platform?.submit_url || item.platform?.url || "#";
-
-                  return (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-secondary/30 transition-colors group"
-                    >
-                      {/* Platform */}
-                      <td className="p-4 font-semibold text-white">
-                        <div className="flex items-center gap-2">
-                          <span>{platName}</span>
-                          {item.platform?.domain_rating && (
-                            <span className="text-[10px] text-muted-foreground font-mono">
-                              (DR {item.platform.domain_rating})
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Tier */}
-                      <td className="p-4">
-                        <Badge
-                          variant={
-                            tier === 1
-                              ? "tier1"
-                              : tier === 2
-                              ? "tier2"
-                              : tier === 3
-                              ? "tier3"
-                              : "tier4"
-                          }
-                          className="text-[10px]"
-                        >
-                          Tier {tier}
-                        </Badge>
-                      </td>
-
-                      {/* Status Selector */}
-                      <td className="p-4">
-                        <select
-                          value={item.status}
-                          onChange={(e) =>
-                            updateItemStatus(item.platform_id, e.target.value as SubmissionStatus)
-                          }
-                          className={`px-2.5 py-1 rounded-md text-xs font-semibold focus:outline-none border ${
-                            item.status === "live"
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                              : item.status === "submitted" || item.status === "pending review"
-                              ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
-                              : item.status === "rejected"
-                              ? "border-red-500/40 bg-red-500/10 text-red-400"
-                              : "border-border bg-background/50 text-muted-foreground"
-                          }`}
-                        >
-                          <option value="not started">Not Started</option>
-                          <option value="submitted">Submitted</option>
-                          <option value="pending review">Pending Review</option>
-                          <option value="live">Live</option>
-                          <option value="rejected">Rejected</option>
-                        </select>
-                      </td>
-
-                      {/* Live URL */}
-                      <td className="p-4">
-                        {item.live_url ? (
-                          <div className="flex items-center gap-1.5">
-                            <a
-                              href={item.live_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-indigo-400 hover:underline max-w-[160px] truncate block"
-                            >
-                              {item.live_url}
-                            </a>
-                            <ExternalLink className="w-3 h-3 text-muted-foreground" />
-                          </div>
-                        ) : (
-                          <input
-                            type="url"
-                            placeholder="Paste live URL..."
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                updateLiveUrl(item.platform_id, (e.target as HTMLInputElement).value);
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (e.target.value.trim().length > 0) {
-                                updateLiveUrl(item.platform_id, e.target.value);
-                              }
-                            }}
-                            className="w-36 px-2 py-0.5 rounded border border-border/80 bg-background/50 text-[11px] placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                          />
-                        )}
-                      </td>
-
-                      {/* Unique UTM Link */}
-                      <td className="p-4">
-                        <button
-                          onClick={() => copyUtm(item.utm_link, item.id)}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-secondary/80 border border-border hover:bg-secondary text-[11px] text-muted-foreground hover:text-white transition-colors"
-                          title="Click to copy unique UTM link"
-                        >
-                          {copiedUtm === item.id ? (
-                            <Check className="w-3 h-3 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                          <span className="font-mono">
-                            {copiedUtm === item.id ? "Copied!" : "Copy UTM Link"}
-                          </span>
-                        </button>
-                      </td>
-
-                      {/* Date */}
-                      <td className="p-4 text-muted-foreground font-mono text-[11px]">
-                        {formatDate(item.submitted_at)}
-                      </td>
-
-                      {/* Submit action */}
-                      <td className="p-4 text-right">
-                        <Button asChild variant="ghost" size="sm" className="h-7 text-[11px] gap-1 hover:text-white">
-                          <a href={submitUrl} target="_blank" rel="noreferrer">
-                            Submit <ExternalLink className="w-3 h-3" />
-                          </a>
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
+                <ul>{visible.map((item) => <TrackerRow key={item.id} item={item} productId={productId} onSave={saveItem} />)}</ul>
               )}
-            </tbody>
-          </table>
-        </div>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

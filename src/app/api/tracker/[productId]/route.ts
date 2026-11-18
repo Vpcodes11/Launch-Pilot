@@ -45,20 +45,29 @@ export async function PATCH(
     if (proof_url !== undefined) updates.proof_url = proof_url;
 
     const updated = await DataService.updateProductPlatform(productId, platformId, updates);
+    if (!updated) {
+      return NextResponse.json({ error: "Tracker item could not be updated" }, { status: 404 });
+    }
 
     // If product now has many live listings, trigger launch complete check
     if (status === "live") {
-      const allItems = await DataService.getProductPlatforms(productId);
-      const liveCount = allItems.filter((i) => i.status === "live").length;
-      const product = await DataService.getProduct(productId);
-      if (product && liveCount >= 10 && product.status !== "launched") {
-        await DataService.updateProduct(productId, { status: "launched" });
-        await EmailService.sendLaunchCompleteEmail(
-          product.founder_email,
-          product.founder_name,
-          product.name,
-          liveCount
-        );
+      try {
+        const allItems = await DataService.getProductPlatforms(productId);
+        const liveCount = allItems.filter((i) => i.status === "live").length;
+        const product = await DataService.getProduct(productId);
+        if (product && liveCount >= 10 && product.status !== "launched") {
+          const launched = await DataService.updateProduct(productId, { status: "launched" });
+          if (launched) {
+            await EmailService.sendLaunchCompleteEmail(
+              product.founder_email,
+              product.founder_name,
+              product.name,
+              liveCount
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Launch completion follow-up failed:", error);
       }
     }
 
