@@ -215,7 +215,7 @@ async function main() {
     }
   });
 
-  await runTest("PATCH /api/tracker/[productId] rejects tracker changes before payment", async () => {
+  await runTest("PATCH /api/tracker/[productId] rejects staff-only proof submitted by a founder", async () => {
     const res = await fetch(`${BASE_URL}/api/tracker/${createdProductId}`);
     const data = await res.json();
     const firstItem = data.items[0];
@@ -231,7 +231,7 @@ async function main() {
       }),
     });
 
-    assert(patchRes.status === 403, `Expected 403 before payment, got ${patchRes.status}`);
+    assert(patchRes.status === 403, `Expected 403 for staff-only proof, got ${patchRes.status}`);
   });
 
   // 5. PAYMENTS PROVIDER ABSTRACTION (USD & INR)
@@ -293,7 +293,6 @@ async function main() {
         platformId: firstItem.platform_id,
         status: "live",
         live_url: "https://www.producthunt.com/posts/bugtrackerpro",
-        proof_url: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800",
       }),
     });
 
