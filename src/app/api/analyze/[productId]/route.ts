@@ -9,10 +9,10 @@ export const maxDuration = 60; // 60s max for AI analysis
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const { productId } = params;
+    const { productId } = await params;
     if (!productId) {
       return NextResponse.json({ error: "Product ID is required" }, { status: 400 });
     }

@@ -8,7 +8,7 @@ export class DataService {
   // Profiles & Auth
   static async getCurrentUser(): Promise<Profile | null> {
     try {
-      const supabase = createServerSupabase();
+      const supabase = await createServerSupabase();
       if (supabase) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -31,7 +31,7 @@ export class DataService {
   // Platforms
   static async getPlatforms(): Promise<Platform[]> {
     try {
-      const supabase = createServerSupabase();
+      const supabase = await createServerSupabase();
       if (supabase) {
         const { data, error } = await supabase
           .from("platforms")
