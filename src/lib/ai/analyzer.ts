@@ -2,6 +2,44 @@ import { AIAnalysisResponse, AIAnalysisResponseSchema, GeneratedCopySchema } fro
 import { Platform, Product, GeneratedCopy } from "@/types";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { isDemoMode } from "@/lib/supabase/demo";
+
+/** Thrown when no AI provider produced a valid result in production. */
+export class AIUnavailableError extends Error {
+  constructor() {
+    super("AI analysis is temporarily unavailable. Please try again in a few minutes.");
+  }
+}
+
+/**
+ * The rule-based copy generator is for local development and demos only. In production a paying
+ * customer must never receive template copy presented as AI-tailored copy, so AI failures surface
+ * as an error the customer can retry. ALLOW_HEURISTIC_COPY=true re-enables it deliberately.
+ */
+export const heuristicAllowed = () =>
+  isDemoMode() || process.env.NODE_ENV !== "production" || process.env.ALLOW_HEURISTIC_COPY === "true";
+
+const CLAUDE_MODEL = () => process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
+
+/** One Claude call that must return JSON. Returns null on any failure so the caller can try the next provider. */
+async function claudeJson(client: Anthropic, system: string | undefined, user: string, maxTokens: number): Promise<unknown | null> {
+  const response = await client.beta.messages.create({
+    model: CLAUDE_MODEL(),
+    max_tokens: maxTokens,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low" },
+    ...(system ? { system } : {}),
+    messages: [{ role: "user", content: `${user}\n\nReturn ONLY raw JSON, with no markdown code fences or conversational preamble.` }],
+  });
+  if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
+    console.warn("Claude stopped early:", response.stop_reason);
+    return null;
+  }
+  const text = response.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
+  const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  return JSON.parse(cleaned);
+}
 
 export class AIAnalyzer {
   private static getOpenAIClient(): OpenAI | null {
@@ -146,33 +184,19 @@ Respond with a JSON object conforming strictly to this format:
     // Try Anthropic if configured
     if (anthropic) {
       try {
-        const response = await anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages: [
-            {
-              role: "user",
-              content: `${userPrompt}\n\nReturn ONLY raw JSON, with no markdown code fences or conversational preamble.`,
-            },
-          ],
-        });
-
-        const textBlock = response.content.find((c) => c.type === "text");
-        if (textBlock && "text" in textBlock) {
-          const cleaned = textBlock.text.trim().replace(/^```json/i, "").replace(/```$/i, "").trim();
-          const parsed = JSON.parse(cleaned);
-          const validated = AIAnalysisResponseSchema.safeParse(parsed);
-          if (validated.success) {
-            return validated.data;
-          }
+        const parsed = await claudeJson(anthropic, systemPrompt, userPrompt, 16000);
+        const validated = AIAnalysisResponseSchema.safeParse(parsed);
+        if (validated.success) {
+          return validated.data;
         }
+        console.warn("Anthropic analysis did not match the schema:", validated.error.issues.slice(0, 3));
       } catch (err) {
         console.warn("Anthropic analysis error, attempting retry / fallback:", err);
       }
     }
 
-    // High-fidelity fallback indie-hacker heuristic engine
+    // Rule-based generator: development and demo only (see heuristicAllowed).
+    if (!heuristicAllowed()) throw new AIUnavailableError();
     return this.generateHeuristicAnalysis(product, platforms);
   }
 
@@ -230,24 +254,16 @@ RULES:
 
     if (anthropic) {
       try {
-        const res = await anthropic.messages.create({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: `${prompt}\nReturn raw JSON only.` }],
-        });
-        const textBlock = res.content.find((c) => c.type === "text");
-        if (textBlock && "text" in textBlock) {
-          const cleaned = textBlock.text.trim().replace(/^```json/i, "").replace(/```$/i, "").trim();
-          const parsed = JSON.parse(cleaned);
-          const valid = GeneratedCopySchema.safeParse(parsed);
-          if (valid.success) return valid.data;
-        }
+        const parsed = await claudeJson(anthropic, undefined, prompt, 4000);
+        const valid = GeneratedCopySchema.safeParse(parsed);
+        if (valid.success) return valid.data;
       } catch (e) {
         console.warn("Regenerate Anthropic error:", e);
       }
     }
 
-    // Heuristic generator
+    // Rule-based generator: development and demo only (see heuristicAllowed).
+    if (!heuristicAllowed()) throw new AIUnavailableError();
     return this.generatePlatformCopyHeuristic(product, platform);
   }
 

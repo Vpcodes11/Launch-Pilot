@@ -87,7 +87,7 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-white mb-3">Indie Friendly</h4>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Built with Next.js 14, Supabase, Tailwind, and OpenAI. Zero spam, zero fake testimonials. Genuine launches only.
+              Built with Next.js, Supabase and AI. Zero spam, zero fake testimonials. Genuine launches only.
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>Made with</span>
