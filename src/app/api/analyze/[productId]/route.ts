@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataService } from "@/lib/services/data";
 import { previewAnalysis } from "@/lib/services/report-access";
-import { AIAnalyzer } from "@/lib/ai/analyzer";
+import { AIAnalyzer, AIUnavailableError } from "@/lib/ai/analyzer";
 import { EmailService } from "@/lib/email/resend";
 import { ProductPlatform } from "@/types";
 
-export const maxDuration = 60; // 60s max for AI analysis
+export const maxDuration = 300; // AI analysis of every platform can take a couple of minutes
 
 export async function POST(
   req: NextRequest,
@@ -96,6 +96,9 @@ export async function POST(
       productStatus: updated.status,
     });
   } catch (error) {
+    if (error instanceof AIUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error("Analysis API error:", error);
     return NextResponse.json(
       { error: "Failed to generate analysis", details: error instanceof Error ? error.message : "Unknown error" },

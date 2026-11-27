@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DataService } from "@/lib/services/data";
-import { AIAnalyzer } from "@/lib/ai/analyzer";
+import { AIAnalyzer, AIUnavailableError } from "@/lib/ai/analyzer";
+
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,6 +45,9 @@ export async function POST(req: NextRequest) {
       copy: regeneratedCopy,
     });
   } catch (error) {
+    if (error instanceof AIUnavailableError) {
+      return NextResponse.json({ error: error.message }, { status: 503 });
+    }
     console.error("Regenerate copy error:", error);
     return NextResponse.json(
       { error: "Failed to regenerate copy", details: error instanceof Error ? error.message : "Unknown error" },

@@ -229,6 +229,8 @@ In staging, register Stripe `checkout.session.completed` and `checkout.session.a
 
 
 5. Deploy!
+6. Open `https://your-domain/api/health?key=YOUR_HEALTH_KEY`: it lists every setting as present or missing.
+7. Make yourself admin: in Supabase → Table editor → `profiles`, set `role` to `admin` on your own row (users can't change this themselves).
 
 
 ### Local demo and production access
